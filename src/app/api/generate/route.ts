@@ -4,20 +4,23 @@ import { SectionType } from '@/lib/store'
 
 export const runtime = 'nodejs'
 
+// Sentinel that separates streamed HTML from the log JSON trailer
+const LOG_SEPARATOR = '\n\n<!--PAGECRAFT_LOG:'
+
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { type, pagePrompt, customPrompt, classify } = body
 
   if (classify) {
-    const sections = await classifyIntent(pagePrompt)
-    return Response.json({ sections })
+    const result = await classifyIntent(pagePrompt)
+    return Response.json({ sections: result.sections, log: result.log })
   }
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        await generateSection(
+        const result = await generateSection(
           type as SectionType,
           pagePrompt,
           customPrompt,
@@ -25,6 +28,9 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(chunk))
           }
         )
+        // Append log as a JSON trailer after the HTML stream
+        const trailer = `${LOG_SEPARATOR}${JSON.stringify(result.log)}-->`
+        controller.enqueue(encoder.encode(trailer))
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Generation failed'
         controller.enqueue(encoder.encode(`<!-- ERROR: ${msg} -->`))

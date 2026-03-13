@@ -5,7 +5,24 @@ import { Sidebar } from '@/components/builder/Sidebar'
 import { Canvas } from '@/components/builder/Canvas'
 import { PropertiesPanel } from '@/components/builder/PropertiesPanel'
 import { useBuilderStore, SectionType } from '@/lib/store'
+import { useLogStore, AILogEntry } from '@/lib/logStore'
+import { AICallLog } from '@/lib/ai'
 import { toast } from 'sonner'
+
+const LOG_SEPARATOR = '\n\n<!--PAGECRAFT_LOG:'
+
+function parseStreamResult(raw: string): { html: string; log: AICallLog | null } {
+  const sepIdx = raw.indexOf(LOG_SEPARATOR)
+  if (sepIdx === -1) return { html: raw, log: null }
+  const html = raw.slice(0, sepIdx)
+  try {
+    const jsonStr = raw.slice(sepIdx + LOG_SEPARATOR.length, raw.lastIndexOf('-->'))
+    const log = JSON.parse(jsonStr) as AICallLog
+    return { html, log }
+  } catch {
+    return { html, log: null }
+  }
+}
 
 export default function BuilderPage() {
   const {
@@ -16,6 +33,20 @@ export default function BuilderPage() {
     setSectionGenerating,
     setSelectedSection,
   } = useBuilderStore()
+
+  const { addLog } = useLogStore()
+
+  function writeLog(log: AICallLog | null, pageTitle: string, pagePrompt: string, customPrompt?: string) {
+    if (!log) return
+    const entry: Omit<AILogEntry, 'id'> = {
+      ...log,
+      timestamp: Date.now(),
+      pageTitle,
+      pagePrompt,
+      customPrompt,
+    }
+    addLog(entry)
+  }
 
   async function streamSection(
     type: SectionType,
@@ -33,16 +64,29 @@ export default function BuilderPage() {
 
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
-    let html = ''
+    let raw = ''
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      html += decoder.decode(value, { stream: true })
+      const chunk = decoder.decode(value, { stream: true })
+      raw += chunk
 
+      // Stream clean HTML to canvas (strip log trailer while streaming)
       if (existingSectionId) {
-        updateSectionHtml(existingSectionId, html)
+        const visibleHtml = raw.includes(LOG_SEPARATOR)
+          ? raw.slice(0, raw.indexOf(LOG_SEPARATOR))
+          : raw
+        updateSectionHtml(existingSectionId, visibleHtml)
       }
+    }
+
+    const { html, log } = parseStreamResult(raw)
+    writeLog(log, page.title, pagePrompt, customPrompt)
+
+    // Final update with clean HTML (trailer stripped)
+    if (existingSectionId) {
+      updateSectionHtml(existingSectionId, html)
     }
 
     return html
@@ -51,34 +95,45 @@ export default function BuilderPage() {
   async function handleGenerate(prompt: string) {
     setGenerating(true)
     try {
-      // Step 1: classify intent → get section list
+      // Step 1: classify → get ordered section list
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ classify: true, pagePrompt: prompt }),
       })
-      const { sections: sectionTypes } = await res.json() as { sections: SectionType[] }
-      toast.info(`Building ${sectionTypes.length} sections…`)
+      const { sections: sectionTypes, log: classifyLog } = await res.json() as {
+        sections: SectionType[]
+        log: AICallLog
+      }
+      writeLog(classifyLog, page.title, prompt)
+      toast.info(`Building ${sectionTypes.length} sections in parallel…`)
 
-      // Step 2: generate each section sequentially, streaming into canvas
+      // Step 2: add ALL sections immediately as placeholders (preserves order)
+      const sectionIds: string[] = []
       for (const type of sectionTypes) {
         addSection(type, `<!-- generating ${type}… -->`, prompt)
         const sections = useBuilderStore.getState().page.sections
-        const newSection = sections[sections.length - 1]
-        setSectionGenerating(newSection.id, true)
-
-        try {
-          await streamSection(type, prompt, undefined, newSection.id)
-        } catch (err) {
-          updateSectionHtml(newSection.id, `<!-- Failed to generate ${type} -->`)
-          toast.error(`Failed to generate ${type}`)
-        } finally {
-          setSectionGenerating(newSection.id, false)
-        }
+        const newId = sections[sections.length - 1].id
+        sectionIds.push(newId)
+        setSectionGenerating(newId, true)
       }
 
+      // Step 3: stream ALL sections concurrently — each updates its own slot live
+      await Promise.all(
+        sectionTypes.map(async (type, i) => {
+          const id = sectionIds[i]
+          try {
+            await streamSection(type, prompt, undefined, id)
+          } catch {
+            updateSectionHtml(id, `<!-- Failed to generate ${type} -->`)
+            toast.error(`Failed to generate ${type}`)
+          } finally {
+            setSectionGenerating(id, false)
+          }
+        })
+      )
+
       toast.success('Page generated!')
-      // select first section
       const first = useBuilderStore.getState().page.sections[0]
       if (first) setSelectedSection(first.id)
     } catch (err) {
@@ -90,7 +145,7 @@ export default function BuilderPage() {
   }
 
   async function handleAddSection(type: SectionType) {
-    const prompt = page.prompt || `A ${type} section`
+    const prompt = page.prompt || 'general purpose webpage'
     addSection(type, `<!-- generating ${type}… -->`, prompt)
     const sections = useBuilderStore.getState().page.sections
     const newSection = sections[sections.length - 1]
@@ -98,7 +153,7 @@ export default function BuilderPage() {
     setSelectedSection(newSection.id)
 
     try {
-      await streamSection(type, page.prompt || 'general purpose webpage', undefined, newSection.id)
+      await streamSection(type, prompt, undefined, newSection.id)
       toast.success(`${type} section added`)
     } catch {
       updateSectionHtml(newSection.id, `<!-- Failed to generate ${type} -->`)
