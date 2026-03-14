@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import {
   ArrowLeft, Zap, Trash2, Download, Search, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, AlertTriangle, Clock, Code2, MessageSquare,
-  Filter, X, BarChart2
+  Filter, X, BarChart2, RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -223,6 +223,38 @@ export default function LogsPage() {
     toast.success('Logs exported')
   }
 
+  async function handleSyncToServer() {
+    if (logs.length === 0) return
+    try {
+      const payload = logs.map((l) => ({
+        ts: new Date(l.timestamp).toISOString(),
+        step: l.step,
+        sectionType: l.sectionType,
+        model: l.model,
+        fallbackUsed: l.fallbackUsed,
+        status: l.status,
+        durationMs: l.durationMs,
+        inputTokensEst: l.inputTokensEst,
+        outputTokensEst: l.outputTokensEst,
+        pagePrompt: l.pagePrompt,
+        customPrompt: l.customPrompt,
+        error: l.error,
+        userMessage: l.userMessage,
+        systemPrompt: l.systemPrompt,
+        outputHtml: l.outputHtml.slice(0, 800),
+      }))
+      const res = await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      toast.success(`Synced ${data.written} entries to server logs`)
+    } catch {
+      toast.error('Sync failed')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -240,6 +272,9 @@ export default function LogsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSyncToServer} disabled={logs.length === 0} className="text-xs gap-1.5 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300">
+              <RefreshCw className="w-3.5 h-3.5" /> Sync to Server
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExport} disabled={logs.length === 0} className="text-xs gap-1.5">
               <Download className="w-3.5 h-3.5" /> Export JSON
             </Button>

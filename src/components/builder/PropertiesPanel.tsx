@@ -7,19 +7,68 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { RefreshCw, Code2, X, Loader2, Wand2 } from 'lucide-react'
+import { RefreshCw, Code2, X, Loader2, Wand2, Paintbrush } from 'lucide-react'
+import { toast } from 'sonner'
+import { useLogStore } from '@/lib/logStore'
 
 interface PropertiesPanelProps {
   onRegenerate: (sectionId: string, customPrompt: string) => void
 }
 
 export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
-  const { page, selectedSectionId, setSelectedSection, updateSectionHtml } = useBuilderStore()
+  const { page, selectedSectionId, setSelectedSection, updateSectionHtml, snapshotSections, revertSections, htmlSnapshots } = useBuilderStore()
+  const { addLog } = useLogStore()
   const section = page.sections.find((s) => s.id === selectedSectionId)
+  const canRevert = section && htmlSnapshots[section.id] != null && htmlSnapshots[section.id] !== section.html
 
   const [regenPrompt, setRegenPrompt] = useState('')
   const [editingHtml, setEditingHtml] = useState(false)
   const [htmlValue, setHtmlValue] = useState('')
+  const [aiStylePrompt, setAiStylePrompt] = useState('')
+  const [applyingStyle, setApplyingStyle] = useState(false)
+
+  function handleRevert() {
+    if (!section) return
+    revertSections([section.id])
+    toast.success('Reverted to previous version')
+  }
+
+  async function handleAiStyleEdit() {
+    if (!section || !aiStylePrompt.trim()) return
+    snapshotSections([section.id])
+    setApplyingStyle(true)
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          styleEdit: true,
+          currentHtml: section.html,
+          styleInstruction: aiStylePrompt.trim(),
+          sectionType: section.type,
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`HTTP ${res.status}: ${text}`)
+      }
+      const data = await res.json()
+      if (data.html?.trim()) {
+        updateSectionHtml(section!.id, data.html)
+        setAiStylePrompt('')
+        toast.success('Style applied!')
+        if (data.log) addLog({ ...data.log, timestamp: Date.now(), pageTitle: page.title, pagePrompt: page.prompt, customPrompt: aiStylePrompt.trim() })
+      } else {
+        toast.error('No changes were made — try rephrasing')
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(`Style edit failed: ${msg}`)
+      console.error('Style edit failed', err)
+    } finally {
+      setApplyingStyle(false)
+    }
+  }
 
   if (!section) {
     return (
@@ -85,6 +134,46 @@ export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
                 <><RefreshCw className="w-4 h-4 mr-2" /> Regenerate</>
               )}
             </Button>
+          </div>
+
+          <Separator />
+
+          {/* Style Tweaker */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Paintbrush className="w-4 h-4 text-pink-500" />
+              <span className="text-sm font-semibold text-gray-700">Style Tweaks</span>
+            </div>
+            <p className="text-xs text-gray-400 mb-2 leading-relaxed">Describe a specific visual change — no full regeneration.</p>
+            <Textarea
+              value={aiStylePrompt}
+              onChange={(e) => setAiStylePrompt(e.target.value)}
+              placeholder={`e.g. "make the background dark navy", "change headline font to serif", "increase padding", "make CTA button green"`}
+              className="text-sm resize-none h-20 bg-white"
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={handleAiStyleEdit}
+                disabled={applyingStyle || !aiStylePrompt.trim()}
+                className="flex-1 mt-2 bg-pink-600 hover:bg-pink-700 text-white text-sm"
+              >
+                {applyingStyle ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Applying...</>
+                ) : (
+                  <><Paintbrush className="w-4 h-4 mr-2" /> Apply</>
+                )}
+              </Button>
+              {canRevert && (
+                <Button
+                  onClick={handleRevert}
+                  variant="outline"
+                  className="mt-2 text-xs px-3 border-orange-300 text-orange-600 hover:bg-orange-50"
+                  title="Undo last style change"
+                >
+                  Undo
+                </Button>
+              )}
+            </div>
           </div>
 
           <Separator />

@@ -7,7 +7,7 @@ export type LogStatus = 'success' | 'error' | 'fallback'
 export interface AILogEntry {
   id: string
   timestamp: number
-  step: 'classify' | 'generate'
+  step: 'classify' | 'generate' | 'enhance'
   sectionType: string
   model: string
   fallbackUsed: boolean
@@ -24,6 +24,9 @@ export interface AILogEntry {
   customPrompt?: string
 }
 
+// Only persist lightweight fields — systemPrompt/userMessage/outputHtml are too large for localStorage
+type PersistedLogEntry = Omit<AILogEntry, 'systemPrompt' | 'userMessage' | 'outputHtml'>
+
 interface LogStore {
   logs: AILogEntry[]
   addLog: (entry: Omit<AILogEntry, 'id'>) => void
@@ -37,12 +40,18 @@ export const useLogStore = create<LogStore>()(
       logs: [],
       addLog: (entry) =>
         set((s) => ({
-          logs: [{ ...entry, id: nanoid() }, ...s.logs].slice(0, 200), // cap at 200 entries
+          logs: [{ ...entry, id: nanoid() }, ...s.logs].slice(0, 50), // cap at 50 entries
         })),
       clearLogs: () => set({ logs: [] }),
       deleteLog: (id) => set((s) => ({ logs: s.logs.filter((l) => l.id !== id) })),
     }),
-    { name: 'pagecraft-ai-logs' }
+    {
+      name: 'pagecraft-ai-logs',
+      // Strip large fields before writing to localStorage
+      partialize: (state) => ({
+        logs: state.logs.map(({ systemPrompt: _sp, userMessage: _um, outputHtml: _oh, ...rest }) => rest) as PersistedLogEntry[],
+      }),
+    }
   )
 )
 

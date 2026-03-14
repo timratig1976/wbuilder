@@ -6,32 +6,68 @@ import { Canvas } from '@/components/builder/Canvas'
 import { PropertiesPanel } from '@/components/builder/PropertiesPanel'
 import { useBuilderStore, SectionType } from '@/lib/store'
 import { useLogStore, AILogEntry } from '@/lib/logStore'
-import { AICallLog } from '@/lib/ai'
+import { AICallLog, PageContext, ExistingSection } from '@/lib/ai'
 import { toast } from 'sonner'
 
-const LOG_SEPARATOR = '\n\n<!--PAGECRAFT_LOG:'
+function makeRunId(): string {
+  return `run-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
 
-function parseStreamResult(raw: string): { html: string; log: AICallLog | null } {
-  const sepIdx = raw.indexOf(LOG_SEPARATOR)
-  if (sepIdx === -1) return { html: raw, log: null }
-  const html = raw.slice(0, sepIdx)
+const LOG_SEPARATOR = '\n\n<!--PAGECRAFT_LOG:'
+const ENHANCE_SEPARATOR = '\n\n<!--PAGECRAFT_ENHANCED:'
+
+function parseStreamResult(raw: string): {
+  html: string
+  log: AICallLog | null
+  enhancedHtml: string | null
+  enhanceLog: AICallLog | null
+} {
+  // Find pass-1 log boundary
+  const logIdx = raw.indexOf(LOG_SEPARATOR)
+  const html = logIdx !== -1 ? raw.slice(0, logIdx) : raw
+
+  let log: AICallLog | null = null
+  let enhancedHtml: string | null = null
+  let enhanceLog: AICallLog | null = null
+
   try {
-    const jsonStr = raw.slice(sepIdx + LOG_SEPARATOR.length, raw.lastIndexOf('-->'))
-    const log = JSON.parse(jsonStr) as AICallLog
-    return { html, log }
-  } catch {
-    return { html, log: null }
-  }
+    if (logIdx !== -1) {
+      const enhIdx = raw.indexOf(ENHANCE_SEPARATOR)
+      const logJsonStart = logIdx + LOG_SEPARATOR.length
+      const logEnd = enhIdx !== -1 ? enhIdx : raw.indexOf('-->', logJsonStart)
+      const logJson = raw.slice(logJsonStart, logEnd !== -1 ? logEnd : undefined)
+      log = JSON.parse(logJson) as AICallLog
+    }
+  } catch { /* ignore */ }
+
+  try {
+    const enhIdx = raw.indexOf(ENHANCE_SEPARATOR)
+    if (enhIdx !== -1) {
+      const jsonStart = enhIdx + ENHANCE_SEPARATOR.length
+      // Find the closing --> that ends the enhance trailer comment
+      // Must search FORWARD from jsonStart so embedded --> inside HTML don't interfere
+      const jsonEnd = raw.indexOf('-->', jsonStart)
+      const enhJson = raw.slice(jsonStart, jsonEnd !== -1 ? jsonEnd : undefined)
+      const parsed = JSON.parse(enhJson) as { html: string; log: AICallLog }
+      enhancedHtml = parsed.html
+      enhanceLog = parsed.log
+    }
+  } catch { /* ignore */ }
+
+  return { html, log, enhancedHtml, enhanceLog }
 }
 
 export default function BuilderPage() {
   const {
     page,
+    project,
+    generating,
     setGenerating,
     addSection,
     updateSectionHtml,
     setSectionGenerating,
     setSelectedSection,
+    setPagePrompt,
   } = useBuilderStore()
 
   const { addLog } = useLogStore()
@@ -48,16 +84,54 @@ export default function BuilderPage() {
     addLog(entry)
   }
 
+  /**
+   * Builds a PageContext snapshot from the current page's sections.
+   * Excludes placeholder/generating sections and the section being replaced.
+   * Strips HTML to short snippets to keep token usage low.
+   */
+  function buildPageContext(
+    type: SectionType,
+    pagePrompt: string,
+    excludeId?: string,
+    insertPosition?: number,
+    totalExpected?: number
+  ): PageContext {
+    const currentPage = useBuilderStore.getState().page
+    const existingSections: ExistingSection[] = currentPage.sections
+      .filter((s) => {
+        if (s.id === excludeId) return false
+        if (s.generating) return false
+        if (s.html.startsWith('<!--')) return false // placeholder
+        return true
+      })
+      .map((s) => ({
+        type: s.type,
+        label: s.label,
+        htmlSnippet: s.html.slice(0, 400),
+      }))
+    return {
+      pageTitle: currentPage.title,
+      pagePrompt,
+      existingSections,
+      insertPosition,
+      totalExpected,
+    }
+  }
+
   async function streamSection(
     type: SectionType,
     pagePrompt: string,
     customPrompt?: string,
-    existingSectionId?: string
+    existingSectionId?: string,
+    pageContext?: PageContext,
+    runId?: string,
+    runType?: string
   ): Promise<string> {
+    const brand = project.brand
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, pagePrompt, customPrompt }),
+      body: JSON.stringify({ type, pagePrompt, customPrompt, brand, pageContext, runId, runType }),
     })
 
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
@@ -65,50 +139,73 @@ export default function BuilderPage() {
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let raw = ''
+    let pass1Applied = false
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      const chunk = decoder.decode(value, { stream: true })
-      raw += chunk
+      raw += decoder.decode(value, { stream: true })
 
-      // Stream clean HTML to canvas (strip log trailer while streaming)
-      if (existingSectionId) {
-        const visibleHtml = raw.includes(LOG_SEPARATOR)
-          ? raw.slice(0, raw.indexOf(LOG_SEPARATOR))
-          : raw
-        updateSectionHtml(existingSectionId, visibleHtml)
+      // As soon as pass-1 HTML + log trailer arrives, show it on canvas immediately
+      if (!pass1Applied && raw.includes(LOG_SEPARATOR)) {
+        const { html: pass1Html, log: pass1Log } = parseStreamResult(raw)
+        if (pass1Html.trim().length > 100) {
+          pass1Applied = true
+          if (existingSectionId) updateSectionHtml(existingSectionId, pass1Html)
+          writeLog(pass1Log, page.title, pagePrompt, customPrompt)
+        }
+      }
+
+      // As soon as enhance trailer arrives, swap to enhanced HTML
+      const enhSepIdx = raw.indexOf(ENHANCE_SEPARATOR)
+      if (enhSepIdx !== -1 && raw.indexOf('-->', enhSepIdx + ENHANCE_SEPARATOR.length) !== -1) {
+        const { enhancedHtml, enhanceLog } = parseStreamResult(raw)
+        if (enhancedHtml && enhancedHtml.trim().length > 100) {
+          if (existingSectionId) updateSectionHtml(existingSectionId, enhancedHtml)
+          writeLog(enhanceLog, page.title, pagePrompt, customPrompt)
+          return enhancedHtml
+        }
       }
     }
 
-    const { html, log } = parseStreamResult(raw)
-    writeLog(log, page.title, pagePrompt, customPrompt)
-
-    // Final update with clean HTML (trailer stripped)
-    if (existingSectionId) {
+    // Fallback: parse full accumulated stream
+    const { html, log, enhancedHtml, enhanceLog } = parseStreamResult(raw)
+    if (!pass1Applied && existingSectionId && html.trim().length > 100) {
       updateSectionHtml(existingSectionId, html)
+      writeLog(log, page.title, pagePrompt, customPrompt)
+    }
+    if (enhancedHtml && enhancedHtml.trim().length > 100) {
+      if (existingSectionId) updateSectionHtml(existingSectionId, enhancedHtml)
+      writeLog(enhanceLog, page.title, pagePrompt, customPrompt)
+      return enhancedHtml
     }
 
     return html
   }
 
   async function handleGenerate(prompt: string) {
+    if (generating) return // prevent concurrent runs
+    const runId = makeRunId()
     setGenerating(true)
+    setPagePrompt(prompt) // persist prompt so regenerate uses it
     try {
       // Step 1: classify → get ordered section list
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ classify: true, pagePrompt: prompt }),
+        body: JSON.stringify({ classify: true, pagePrompt: prompt, runId }),
       })
       const { sections: sectionTypes, log: classifyLog } = await res.json() as {
         sections: SectionType[]
         log: AICallLog
       }
       writeLog(classifyLog, page.title, prompt)
-      toast.info(`Building ${sectionTypes.length} sections in parallel…`)
+      toast.info(`Generating ${sectionTypes.length} sections in parallel…`)
 
-      // Step 2: add ALL sections immediately as placeholders (preserves order)
+      // Clear existing sections so re-runs don't accumulate
+      useBuilderStore.getState().clearSections()
+
+      // Step 2: add ALL sections immediately as placeholders (preserves order in sidebar)
       const sectionIds: string[] = []
       for (const type of sectionTypes) {
         addSection(type, `<!-- generating ${type}… -->`, prompt)
@@ -118,12 +215,14 @@ export default function BuilderPage() {
         setSectionGenerating(newId, true)
       }
 
-      // Step 3: stream ALL sections concurrently — each updates its own slot live
+      // Step 3: generate ALL sections in parallel — each appears on canvas as it completes
+      // Style consistency is maintained by the shared page prompt passed to every section
       await Promise.all(
         sectionTypes.map(async (type, i) => {
           const id = sectionIds[i]
           try {
-            await streamSection(type, prompt, undefined, id)
+            const ctx = buildPageContext(type, prompt, id, i, sectionTypes.length)
+            await streamSection(type, prompt, undefined, id, ctx, runId, 'full-page')
           } catch {
             updateSectionHtml(id, `<!-- Failed to generate ${type} -->`)
             toast.error(`Failed to generate ${type}`)
@@ -147,13 +246,14 @@ export default function BuilderPage() {
   async function handleAddSection(type: SectionType) {
     const prompt = page.prompt || 'general purpose webpage'
     addSection(type, `<!-- generating ${type}… -->`, prompt)
-    const sections = useBuilderStore.getState().page.sections
-    const newSection = sections[sections.length - 1]
+    const afterAddSections = useBuilderStore.getState().page.sections
+    const newSection = afterAddSections[afterAddSections.length - 1]
     setSectionGenerating(newSection.id, true)
     setSelectedSection(newSection.id)
 
     try {
-      await streamSection(type, prompt, undefined, newSection.id)
+      const ctx = buildPageContext(type, prompt, newSection.id, afterAddSections.length - 1)
+      await streamSection(type, prompt, undefined, newSection.id, ctx, makeRunId(), 'add-section')
       toast.success(`${type} section added`)
     } catch {
       updateSectionHtml(newSection.id, `<!-- Failed to generate ${type} -->`)
@@ -169,11 +269,17 @@ export default function BuilderPage() {
 
     setSectionGenerating(sectionId, true)
     try {
+      const prompt = page.prompt || 'general purpose webpage'
+      const sectionIndex = page.sections.findIndex((s) => s.id === sectionId)
+      const ctx = buildPageContext(section.type, prompt, sectionId, sectionIndex)
       await streamSection(
         section.type,
-        page.prompt || 'general purpose webpage',
+        prompt,
         customPrompt || undefined,
-        sectionId
+        sectionId,
+        ctx,
+        makeRunId(),
+        'regenerate'
       )
       toast.success('Section regenerated')
     } catch {
