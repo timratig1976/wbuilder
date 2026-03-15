@@ -1,0 +1,62 @@
+{
+  "id": "luxury-editorial-v1",
+  "paradigm": "luxury-editorial",
+  "rules": {
+    "layout": {
+      "section_padding": "py-28 md:py-40",
+      "max_width": "max-w-5xl mx-auto",
+      "columns_max": 2,
+      "overlaps_allowed": false,
+      "negative_margin_allowed": false,
+      "full_bleed_allowed": false,
+      "asymmetric_allowed": true,
+      "section_transition": "flat"
+    },
+    "typography": {
+      "heading_font": "font-display",
+      "heading_weight": "font-light",
+      "heading_size_hero": "text-6xl md:text-8xl",
+      "heading_size_section": "text-5xl md:text-6xl",
+      "tracking": "tracking-tight",
+      "gradient_text_allowed": false
+    },
+    "color": {
+      "base": "light",
+      "dark_sections_allowed": false,
+      "gradient_allowed": false,
+      "accent_count_max": 1
+    },
+    "animation": {
+      "budget": "subtle",
+      "keyframes_allowed": false,
+      "scroll_driven_allowed": false,
+      "hover_effects_allowed": ["opacity"]
+    },
+    "decoration": {
+      "mesh_gradient": false,
+      "glassmorphism": false,
+      "border_glow": false,
+      "geometric_shapes": false,
+      "noise_texture": false,
+      "color_overlays": false
+    }
+  },
+  "forbidden_patterns": [
+    "bg-gradient-*",
+    "animate-*",
+    "font-bold above font-medium",
+    "rounded-full on cards",
+    "multiple accent colors"
+  ],
+  "required_patterns": [
+    "extreme whitespace",
+    "serif typography dominant",
+    "single thin accent line as decoration",
+    "alle grids: grid-cols-1 md:grid-cols-X"
+  ],
+  "html_patterns": {
+    "section_wrapper": "<section class=\"relative overflow-hidden isolate py-28 md:py-40 bg-white\">",
+    "hero_h1": "<h1 class=\"font-display font-light text-6xl md:text-8xl tracking-tight leading-none\">",
+    "accent_line": "<div class=\"w-8 h-px bg-accent mb-8\"></div>"
+  }
+}

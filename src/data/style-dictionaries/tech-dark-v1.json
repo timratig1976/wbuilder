@@ -1,0 +1,63 @@
+{
+  "id": "tech-dark-v1",
+  "paradigm": "tech-dark",
+  "rules": {
+    "layout": {
+      "section_padding": "py-20 md:py-28",
+      "max_width": "max-w-6xl mx-auto",
+      "columns_max": 4,
+      "overlaps_allowed": true,
+      "negative_margin_allowed": false,
+      "full_bleed_allowed": true,
+      "section_transition": "flat"
+    },
+    "typography": {
+      "heading_font": "font-sans",
+      "heading_weight": "font-bold md:font-extrabold",
+      "heading_size_hero": "text-5xl md:text-7xl",
+      "heading_size_section": "text-4xl md:text-5xl",
+      "tracking": "tracking-tighter",
+      "gradient_text_allowed": true
+    },
+    "color": {
+      "base": "dark",
+      "dark_sections_allowed": true,
+      "gradient_allowed": true,
+      "accent_count_max": 2
+    },
+    "animation": {
+      "budget": "moderate",
+      "keyframes_allowed": true,
+      "scroll_driven_allowed": true,
+      "text_animations_allowed": ["word-cycle", "fade-up", "scramble"],
+      "hover_effects_allowed": ["scale", "glow", "reveal"]
+    },
+    "decoration": {
+      "mesh_gradient": true,
+      "glassmorphism": true,
+      "border_glow": true,
+      "geometric_shapes": true,
+      "noise_texture": true,
+      "color_overlays": true
+    }
+  },
+  "forbidden_patterns": [
+    "bg-white",
+    "font-serif",
+    "py-40 oder mehr",
+    "single column hero"
+  ],
+  "required_patterns": [
+    "dark background auf 60%+ der Sections",
+    "gradient oder glow accent im Hero",
+    "min 1 animated element above fold",
+    "alle grids: grid-cols-1 md:grid-cols-X"
+  ],
+  "html_patterns": {
+    "section_wrapper": "<section class=\"relative overflow-hidden isolate bg-zinc-900 py-20 md:py-28\">",
+    "container": "<div class=\"max-w-6xl mx-auto px-5 md:px-8\">",
+    "hero_h1": "<h1 class=\"font-sans font-extrabold text-5xl md:text-7xl tracking-tighter leading-[1.05] text-white\">",
+    "gradient_text": "<span class=\"bg-gradient-to-r from-cyan-400 to-sky-400 bg-clip-text text-transparent\">",
+    "glass_card": "<div class=\"backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl shadow-xl p-6\">"
+  }
+}

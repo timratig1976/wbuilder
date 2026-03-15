@@ -1,0 +1,65 @@
+{
+  "id": "minimal-clean-v1",
+  "paradigm": "minimal-clean",
+  "rules": {
+    "layout": {
+      "section_padding": "py-24 md:py-32",
+      "max_width": "max-w-4xl mx-auto",
+      "columns_max": 2,
+      "overlaps_allowed": false,
+      "negative_margin_allowed": false,
+      "full_bleed_allowed": false,
+      "section_transition": "flat"
+    },
+    "typography": {
+      "heading_font": "font-display",
+      "heading_weight": "font-light",
+      "heading_size_hero": "text-5xl md:text-7xl",
+      "heading_size_section": "text-4xl md:text-5xl",
+      "tracking": "tracking-tight",
+      "gradient_text_allowed": false
+    },
+    "color": {
+      "base": "light",
+      "dark_sections_allowed": false,
+      "gradient_allowed": false,
+      "accent_count_max": 1
+    },
+    "animation": {
+      "budget": "none",
+      "keyframes_allowed": false,
+      "scroll_driven_allowed": false,
+      "hover_effects_allowed": ["opacity", "translate-y-0.5"]
+    },
+    "decoration": {
+      "mesh_gradient": false,
+      "glassmorphism": false,
+      "border_glow": false,
+      "geometric_shapes": false,
+      "noise_texture": false,
+      "color_overlays": false,
+      "diagonal_cuts": false,
+      "concave_sections": false
+    }
+  },
+  "forbidden_patterns": [
+    "bg-gradient-to-*",
+    "backdrop-blur-*",
+    "@keyframes",
+    "animate-*",
+    "min-h-screen ohne md:",
+    "negative margins"
+  ],
+  "required_patterns": [
+    "generous whitespace",
+    "single accent color only",
+    "max 2 font-size variations per section",
+    "alle grids: grid-cols-1 md:grid-cols-X"
+  ],
+  "html_patterns": {
+    "section_wrapper": "<section class=\"relative overflow-hidden isolate py-24 md:py-32 bg-white\">",
+    "container": "<div class=\"max-w-4xl mx-auto px-6\">",
+    "hero_h1": "<h1 class=\"font-display font-light text-5xl md:text-7xl tracking-tight leading-none\">",
+    "cta_primary": "<a href=\"#\" class=\"inline-block px-8 py-4 bg-primary text-white text-sm font-medium rounded-sm hover:opacity-90 transition-opacity\">"
+  }
+}

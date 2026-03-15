@@ -1,0 +1,325 @@
+[
+  {
+    "id": "builtin-concave-transition-001",
+    "type": "section-transition",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Konkave Section-Kurve",
+    "description": "Section endet mit nach innen gewölbter weißer Kurve — das dunkle Ende der Section wird von einem weißen Oval von unten überschnitten. Bekannt von Unzer, Stripe, Premium-Finance-Sites.",
+    "tags": ["concave", "section-transition", "curved-bottom", "dark-hero", "premium"],
+    "industries": ["fintech", "saas", "b2b-services", "payments", "general"],
+    "paradigms": ["bold-expressive", "minimal-clean"],
+    "implementation": {
+      "css_snippet": ".section-concave{position:relative;overflow:hidden}.section-concave::after{content:'';position:absolute;bottom:-60px;left:-5%;right:-5%;height:100px;background:var(--next-section-color,#fff);border-radius:50%;}",
+      "placeholder": "<!-- [TRANSITION: concave-bottom | next=white | depth=60px] -->",
+      "style_dict_key": "rules.layout.section_transition",
+      "style_dict_val": "concave-bottom"
+    },
+    "preview_description": "Unterkante der Section wölbt sich nach innen — weiche organische Trennung statt harter Linie",
+    "visual_weight": "medium",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-diagonal-transition-001",
+    "type": "section-transition",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Diagonaler Abschnitt",
+    "description": "Section endet diagonal durch clip-path — dynamischer Schnitt der Energie und Bewegung vermittelt.",
+    "tags": ["diagonal", "clip-path", "dynamic", "modern"],
+    "industries": ["creative-agency", "saas", "tech", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "css_snippet": ".section-diagonal{clip-path:polygon(0 0,100% 0,100% 88%,0 100%);}",
+      "placeholder": "<!-- [TRANSITION: diagonal-bottom | angle=8deg] -->",
+      "style_dict_key": "rules.layout.section_transition",
+      "style_dict_val": "diagonal-bottom"
+    },
+    "preview_description": "Diagonaler Schnitt am unteren Rand — vermittelt Dynamik und Vorwärtsbewegung",
+    "visual_weight": "medium",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-photo-overlay-001",
+    "type": "background-treatment",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Foto mit Farb-Overlay",
+    "description": "Vollbild-Hintergrundfoto mit semitransparentem dunklen Overlay. Text darüber in Weiß. CTA-Farbe als Highlight. Wirkt premium und sofort visuell stark.",
+    "tags": ["photo-overlay", "full-bleed", "dark-hero", "tinted", "premium"],
+    "industries": ["real-estate", "saas", "consulting", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "html_snippet": "<section class=\"relative overflow-hidden isolate min-h-[70vh] md:min-h-screen flex items-end\"><div class=\"absolute inset-0\" style=\"background:var(--color-dark)\"></div><!-- [IMG: slot=hero-bg | source=crawl] --><div class=\"absolute inset-0\" style=\"background:linear-gradient(to top, var(--color-dark) 30%, rgba(0,0,0,.5) 70%, rgba(0,0,0,.2))\"></div><div class=\"relative z-10 max-w-7xl mx-auto px-5 md:px-8 pb-16 md:pb-24\"><!-- content --></div></section>",
+      "placeholder": "<!-- [BG: photo-overlay | darken=0.6 | gradient=bottom] -->",
+      "style_dict_key": "rules.decoration.color_overlays",
+      "style_dict_val": true
+    },
+    "preview_description": "Hintergrundfoto mit dunklem Tint-Overlay — sofortiger visueller Impact",
+    "visual_weight": "heavy",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-mesh-gradient-001",
+    "type": "background-treatment",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Mesh Gradient Hintergrund",
+    "description": "Organischer Farbverlauf aus mehreren überlagerten radialen Gradienten — wirkt gemalt statt digital. Bekannt von Framer, Linear, modernen SaaS-Sites.",
+    "tags": ["mesh-gradient", "gradient", "colorful", "organic", "modern"],
+    "industries": ["saas", "tech", "creative-agency", "devtools"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "placeholder": "<!-- [BG: mesh-gradient | colors=primary+accent | opacity=0.15] -->",
+      "style_dict_key": "rules.decoration.mesh_gradient",
+      "style_dict_val": true
+    },
+    "preview_description": "Weicher organischer Farbverlauf aus mehreren Punkten — modern und lebendig",
+    "visual_weight": "medium",
+    "brand_dependency": "color-dependent"
+  },
+  {
+    "id": "builtin-geometric-shapes-001",
+    "type": "background-treatment",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Geometrische Hintergrund-Shapes",
+    "description": "Abstrakte geometrische SVG-Formen als dekorativer Hintergrund — Kreise, Linien, Grids mit niedriger Opacity. Dezent aber hochwirksam.",
+    "tags": ["geometric", "shapes", "decorative", "svg", "subtle"],
+    "industries": ["saas", "tech", "b2b", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "placeholder": "<!-- [BG: geometric-shapes | color=primary | opacity=0.06] -->",
+      "style_dict_key": "rules.decoration.geometric_shapes",
+      "style_dict_val": true
+    },
+    "preview_description": "Dezente geometrische SVG-Muster im Hintergrund — gibt Tiefe ohne abzulenken",
+    "visual_weight": "light",
+    "brand_dependency": "color-dependent"
+  },
+  {
+    "id": "builtin-noise-texture-001",
+    "type": "background-treatment",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 0.9,
+    "name": "Noise-Textur Overlay",
+    "description": "Feines Rauschen als SVG-feTurbulence oder base64-Textur über dem Hintergrund — gibt Flächen eine organische, nicht-digitale Anmutung.",
+    "tags": ["noise", "texture", "organic", "grain", "premium"],
+    "industries": ["creative-agency", "luxury", "premium", "general"],
+    "paradigms": ["bold-expressive", "luxury-editorial"],
+    "implementation": {
+      "placeholder": "<!-- [BG: noise-texture | opacity=0.04] -->",
+      "style_dict_key": "rules.decoration.noise_texture",
+      "style_dict_val": true
+    },
+    "preview_description": "Feines Rauschen über Flächen — organische Anmutung statt steriler Digitaloptik",
+    "visual_weight": "light",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-glassmorphism-001",
+    "type": "card-style",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Glassmorphism Karten",
+    "description": "Karten mit backdrop-filter blur und semitransparentem weißen oder farbigen Hintergrund — scheinen zu schweben. Bekannt von Apple, Linear, Vercel.",
+    "tags": ["glassmorphism", "blur", "transparent", "modern", "floating"],
+    "industries": ["saas", "tech", "fintech", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "html_snippet": "<div class=\"backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl shadow-xl p-6\">",
+      "style_dict_key": "rules.decoration.glassmorphism",
+      "style_dict_val": true
+    },
+    "preview_description": "Karten scheinen zu schweben — Blur-Effekt auf Hintergrund",
+    "visual_weight": "medium",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-full-bleed-hero-001",
+    "type": "hero-layout",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Full-Bleed Hero",
+    "description": "Hero-Section dehnt sich über volle Viewport-Breite aus — kein Container-Padding, Inhalt geht bis zum Rand. Maximaler visueller Impact.",
+    "tags": ["full-bleed", "edge-to-edge", "hero", "immersive"],
+    "industries": ["creative-agency", "saas", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "html_snippet": "<section class=\"relative overflow-hidden isolate w-full md:min-h-screen\">",
+      "style_dict_key": "rules.layout.full_bleed_allowed",
+      "style_dict_val": true
+    },
+    "preview_description": "Inhalt geht bis zum Rand — maximaler visueller Impact ohne Container",
+    "visual_weight": "heavy",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-overlap-grid-001",
+    "type": "grid-pattern",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Überlappende Elemente",
+    "description": "Elemente überlappen sich mit negativen Margins oder absolutem Positioning — erzeugt visuelle Tiefe und Spannung.",
+    "tags": ["overlap", "negative-margin", "depth", "layered", "dynamic"],
+    "industries": ["creative-agency", "saas", "general"],
+    "paradigms": ["bold-expressive"],
+    "implementation": {
+      "html_snippet": "<div class=\"relative -mt-8 md:-mt-12 z-10\">",
+      "style_dict_key": "rules.layout.overlaps_allowed",
+      "style_dict_val": true
+    },
+    "preview_description": "Elemente überlappen sich — visuell tiefes, modernes Layout",
+    "visual_weight": "heavy",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-word-cycle-001",
+    "type": "text-animation",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Word-Cycle Headline",
+    "description": "Ein Wort in der Headline wechselt animiert zwischen 3–5 Schlüsselbegriffen — zeigt Vielseitigkeit ohne mehrere Headlines zu brauchen.",
+    "tags": ["animation", "word-cycle", "headline", "text-animation", "dynamic"],
+    "industries": ["saas", "tech", "creative-agency", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "placeholder": "<!-- [ANIM: word-cycle | words: [\"Begriff1\",\"Begriff2\",\"Begriff3\"]] -->",
+      "style_dict_key": "rules.animation.text_animations_allowed",
+      "style_dict_val": ["word-cycle"]
+    },
+    "preview_description": "Headline wechselt animiert zwischen Schlüsselbegriffen — zeigt Vielseitigkeit in einer Zeile",
+    "visual_weight": "light",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-counter-tick-001",
+    "type": "scroll-animation",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 1,
+    "name": "Counter-Tick Zahlen",
+    "description": "Statistik-Zahlen zählen animiert von 0 hoch wenn sie in den Viewport scrollen — macht Trust-Signale und KPIs lebendig. Bestätigt durch 4 Premium-Sites.",
+    "tags": ["counter", "animation", "stats", "scroll", "trust-signal"],
+    "industries": ["saas", "fintech", "b2b", "general"],
+    "paradigms": ["bold-expressive", "tech-dark", "minimal-clean"],
+    "implementation": {
+      "html_snippet": "<div class=\"font-display font-bold text-4xl md:text-5xl text-accent leading-none\" data-target=\"NUMBER\">0</div>",
+      "placeholder": "<!-- [ANIM: counter-tick | target=NUMBER] -->",
+      "style_dict_key": "rules.animation.scroll_driven_allowed",
+      "style_dict_val": true
+    },
+    "preview_description": "Statistik-Zahlen zählen beim Scrollen hoch — macht KPIs und Trust-Signale lebendig",
+    "visual_weight": "light",
+    "brand_dependency": "color-dependent"
+  },
+  {
+    "id": "builtin-scroll-driven-001",
+    "type": "scroll-animation",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 0.85,
+    "name": "Scroll-Driven CSS Animation",
+    "description": "Animationen werden direkt durch die Scroll-Position gesteuert — kein JavaScript nötig. Modernes CSS animation-timeline: scroll().",
+    "tags": ["scroll-driven", "animation", "css", "modern", "no-js"],
+    "industries": ["saas", "tech", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "placeholder": "<!-- [ANIM: scroll-driven | property=opacity | from=0 | to=1] -->",
+      "style_dict_key": "rules.animation.scroll_driven_allowed",
+      "style_dict_val": true
+    },
+    "preview_description": "Elemente animieren direkt mit der Scroll-Position — flüssig und performant",
+    "visual_weight": "light",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-transparent-nav-001",
+    "type": "interaction",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 0.92,
+    "name": "Transparente Nav → Blur beim Scrollen",
+    "description": "Navbar startet transparent über dem Hero und wird beim Scrollen zu einem gefrosteten Glas mit Blur-Effekt. Bekannt von Vercel, Linear, Apple.",
+    "tags": ["navbar", "transparent", "blur", "scroll", "interaction"],
+    "industries": ["saas", "tech", "general"],
+    "paradigms": ["bold-expressive", "tech-dark", "minimal-clean"],
+    "implementation": {
+      "style_dict_key": "navbar.style",
+      "style_dict_val": "transparent-hero"
+    },
+    "preview_description": "Nav startet transparent — beim Scrollen erscheint Blur-Hintergrund",
+    "visual_weight": "light",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-gradient-text-001",
+    "type": "typography",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 0.88,
+    "name": "Gradient Text Effekt",
+    "description": "Headline-Text bekommt einen Farbverlauf — Wort oder Phrase leuchtet in Accent-Farben. Bekannt von Vercel, Framer, Linear.",
+    "tags": ["gradient-text", "typography", "headline", "accent", "tech"],
+    "industries": ["saas", "tech", "devtools"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "html_snippet": "<span class=\"bg-gradient-to-r from-accent to-highlight bg-clip-text\" style=\"-webkit-text-fill-color:transparent\">",
+      "style_dict_key": "rules.typography.gradient_text_allowed",
+      "style_dict_val": true
+    },
+    "preview_description": "Schlüsselwort in der Headline leuchtet im Farbverlauf — Accent-Farbe als Highlight",
+    "visual_weight": "light",
+    "brand_dependency": "color-dependent"
+  },
+  {
+    "id": "builtin-bento-grid-001",
+    "type": "grid-pattern",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 0.9,
+    "name": "Bento-Grid Layout",
+    "description": "Features-Grid mit unterschiedlich großen Karten — ähnlich einem Bento-Box-Raster. Manche Karten span 2 Spalten. Bekannt von Apple, Linear, Framer.",
+    "tags": ["bento-grid", "grid", "features", "asymmetric", "modern"],
+    "industries": ["saas", "tech", "creative-agency", "general"],
+    "paradigms": ["bold-expressive", "tech-dark"],
+    "implementation": {
+      "html_snippet": "<div class=\"grid grid-cols-1 md:grid-cols-3 gap-4\"><div class=\"md:col-span-2\"><!-- große Karte --></div><div><!-- kleine Karte --></div></div>",
+      "style_dict_key": "rules.layout.columns_max",
+      "style_dict_val": 4
+    },
+    "preview_description": "Asymmetrisches Karten-Grid — manche Karten größer, gibt Hierarchie und Dynamik",
+    "visual_weight": "medium",
+    "brand_dependency": "none"
+  },
+  {
+    "id": "builtin-svg-background-001",
+    "type": "background-treatment",
+    "source_url": "builtin",
+    "scraped_at": "2026-03-15T00:00:00Z",
+    "confidence": 0.85,
+    "name": "SVG Hintergrundgrafik",
+    "description": "Dekorative SVG-Illustration oder -Muster als Hintergrundelement — gibt Sections eine unverwechselbare visuelle Identität ohne Fotos.",
+    "tags": ["svg", "illustration", "background", "decorative", "custom"],
+    "industries": ["creative-agency", "saas", "general"],
+    "paradigms": ["bold-expressive", "minimal-clean"],
+    "implementation": {
+      "placeholder": "<!-- [BG: svg-illustration | type=abstract | opacity=0.08] -->",
+      "style_dict_key": "rules.decoration.geometric_shapes",
+      "style_dict_val": true
+    },
+    "preview_description": "Dekorative SVG im Hintergrund — visuell unverwechselbar ohne Fotos",
+    "visual_weight": "light",
+    "brand_dependency": "color-dependent"
+  }
+]

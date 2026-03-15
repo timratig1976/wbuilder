@@ -1,0 +1,67 @@
+{
+  "id": "bold-expressive-v1",
+  "paradigm": "bold-expressive",
+  "rules": {
+    "layout": {
+      "section_padding": "py-16 md:py-24",
+      "max_width": "max-w-7xl mx-auto",
+      "columns_max": 4,
+      "overlaps_allowed": true,
+      "negative_margin_allowed": true,
+      "full_bleed_allowed": true,
+      "section_transition": "concave-bottom"
+    },
+    "typography": {
+      "heading_font": "font-display",
+      "heading_weight": "font-bold",
+      "heading_size_hero": "text-4xl md:text-5xl lg:text-[5rem]",
+      "heading_size_section": "text-3xl md:text-[3rem]",
+      "tracking": "tracking-[-0.025em]",
+      "gradient_text_allowed": true
+    },
+    "color": {
+      "base": "mixed",
+      "dark_sections_allowed": true,
+      "gradient_allowed": true,
+      "accent_count_max": 3
+    },
+    "animation": {
+      "budget": "rich",
+      "keyframes_allowed": true,
+      "scroll_driven_allowed": true,
+      "text_animations_allowed": ["word-cycle", "fade-up", "scramble", "typewriter"],
+      "hover_effects_allowed": ["scale", "glow", "reveal", "magnetic", "tilt"]
+    },
+    "decoration": {
+      "mesh_gradient": true,
+      "glassmorphism": true,
+      "border_glow": true,
+      "geometric_shapes": true,
+      "noise_texture": true,
+      "color_overlays": true,
+      "diagonal_cuts": true,
+      "concave_sections": true
+    }
+  },
+  "forbidden_patterns": [
+    "font-serif (kein reguläres serif — nur Display-Serif)",
+    "py-40 oder mehr",
+    "single-column hero",
+    "min-h-screen ohne md: prefix"
+  ],
+  "required_patterns": [
+    "mindestens ein dark-bg Abschnitt",
+    "gradient oder glow auf Hero-CTA",
+    "animation im sichtbaren Bereich above-fold",
+    "alle grids: grid-cols-1 md:grid-cols-X"
+  ],
+  "html_patterns": {
+    "section_wrapper": "<section class=\"relative overflow-hidden isolate py-16 md:py-24\">",
+    "container": "<div class=\"max-w-7xl mx-auto px-5 md:px-8\">",
+    "eyebrow": "<div class=\"text-[.68rem] font-semibold tracking-[.14em] uppercase text-accent flex items-center gap-2.5 mb-5\"><span class=\"inline-block w-5 h-px bg-accent\"></span>LABEL</div>",
+    "hero_h1": "<h1 class=\"font-display font-bold text-4xl md:text-5xl lg:text-[5rem] leading-[1.05] tracking-[-0.025em]\">",
+    "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-7 py-4 bg-accent text-white text-sm font-semibold tracking-wide rounded-sm hover:bg-accent/90 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/30 transition-all duration-200\">",
+    "dark_section": "<section class=\"relative overflow-hidden isolate bg-primary py-16 md:py-24\">",
+    "stat_number": "<div class=\"font-display font-bold text-4xl md:text-5xl text-accent leading-none\" data-target=\"NUMBER\">"
+  }
+}

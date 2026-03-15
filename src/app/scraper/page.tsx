@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Database, Zap, RefreshCw, Trash2, Code2, Eye, EyeOff,
   ArrowLeft, FileJson, Download, Upload, CheckCircle2,
-  AlertCircle, Layers, Search, ChevronDown, ChevronUp, Info
+  AlertCircle, Layers, Search, ChevronDown, ChevronUp, Info, Globe2, Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -286,11 +286,51 @@ function CategorySection({
   )
 }
 
+interface ScrapeFingerprint {
+  url: string
+  scraped_at: string
+  paradigm_detected: string
+  confidence: number
+  colors: { primary: string; background: string; text: string; accent: string }
+  typography: { heading_font: string; body_font: string; heading_weight: string }
+  decoration: Record<string, boolean>
+  surprises: Array<{ observation: string; category: string; confidence: number; reusability: string }>
+}
+
 export default function ScraperPage() {
   const [data, setData] = useState<BlocksData>({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [scraping, setScraping] = useState(false)
+
+  // v2 fingerprint state
+  const [v2Url, setV2Url] = useState('')
+  const [v2Scraping, setV2Scraping] = useState(false)
+  const [v2Fingerprint, setV2Fingerprint] = useState<ScrapeFingerprint | null>(null)
+  const [v2Error, setV2Error] = useState('')
+
+  async function handleV2Scrape() {
+    if (!v2Url.startsWith('http')) return
+    setV2Scraping(true)
+    setV2Error('')
+    setV2Fingerprint(null)
+    try {
+      const res = await fetch('/api/v2/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: v2Url }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
+      setV2Fingerprint(json.fingerprint)
+      toast.success(`Fingerprint: ${json.fingerprint.paradigm_detected} (${Math.round(json.fingerprint.confidence * 100)}% confidence)`)
+    } catch (err) {
+      setV2Error(String(err))
+      toast.error('Scraping failed')
+    } finally {
+      setV2Scraping(false)
+    }
+  }
 
   const totalBlocks = Object.values(data).reduce((sum, d) => sum + d.count, 0)
   const totalKb = Object.values(data).reduce((sum, d) => sum + d.sizeKb, 0)
@@ -386,6 +426,115 @@ export default function ScraperPage() {
               <div className="text-xs text-gray-500 mt-0.5 font-medium">{stat.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* v2: Site Fingerprint Scraper */}
+        <div className="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-indigo-100 flex items-center gap-2 bg-indigo-50">
+            <Globe2 className="w-4 h-4 text-indigo-600" />
+            <h2 className="font-bold text-gray-900">v2 Site Fingerprint</h2>
+            <Badge className="text-xs bg-indigo-100 text-indigo-700 border-indigo-200 ml-1">GPT-4o Vision</Badge>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-500 mb-4">
+              Scrape any live website → extract design fingerprint → auto-ingest into Discovery queue.
+            </p>
+            <div className="flex gap-3">
+              <Input
+                value={v2Url}
+                onChange={(e) => setV2Url(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleV2Scrape() }}
+                placeholder="https://vercel.com"
+                className="flex-1 text-sm font-mono"
+              />
+              <Button
+                onClick={handleV2Scrape}
+                disabled={v2Scraping || !v2Url.startsWith('http')}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 min-w-[140px]"
+              >
+                {v2Scraping
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Analysing…</>
+                  : <><Globe2 className="w-4 h-4" /> Fingerprint</>
+                }
+              </Button>
+            </div>
+
+            {v2Error && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" /> {v2Error}
+              </div>
+            )}
+
+            {v2Fingerprint && (
+              <div className="mt-5 space-y-4">
+                {/* Header */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-700">
+                    {v2Fingerprint.url}
+                  </span>
+                  <Badge className="bg-indigo-600 text-white text-xs">{v2Fingerprint.paradigm_detected}</Badge>
+                  <Badge variant="outline" className="text-xs">{Math.round(v2Fingerprint.confidence * 100)}% confidence</Badge>
+                </div>
+
+                {/* Tokens */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {Object.entries(v2Fingerprint.colors).map(([k, v]) => (
+                    <div key={k} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                      <div className="w-5 h-5 rounded border border-gray-300 flex-shrink-0" style={{ backgroundColor: v }} />
+                      <div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wide">{k}</div>
+                        <div className="text-xs font-mono text-gray-700">{v}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Typography */}
+                <div className="flex gap-4 text-xs text-gray-600 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                  <span><span className="text-gray-400">Heading: </span><strong>{v2Fingerprint.typography.heading_font}</strong></span>
+                  <span><span className="text-gray-400">Body: </span><strong>{v2Fingerprint.typography.body_font}</strong></span>
+                  <span><span className="text-gray-400">Weight: </span><strong>{v2Fingerprint.typography.heading_weight}</strong></span>
+                </div>
+
+                {/* Detected patterns */}
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Detected Patterns</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(v2Fingerprint.decoration)
+                      .filter(([, val]) => val === true)
+                      .map(([key]) => (
+                        <span key={key} className="text-[11px] bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full font-medium">
+                          {key.replace(/^has_/, '').replace(/_/g, ' ')}
+                        </span>
+                      ))
+                    }
+                  </div>
+                </div>
+
+                {/* Surprises */}
+                {v2Fingerprint.surprises.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Design Surprises → Discovery Queue</div>
+                    <div className="space-y-2">
+                      {v2Fingerprint.surprises.map((s, i) => (
+                        <div key={i} className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs text-gray-700">{s.observation}</p>
+                            <div className="flex gap-2 mt-1">
+                              <span className="text-[10px] text-amber-600">{s.category}</span>
+                              <span className="text-[10px] text-gray-400">{Math.round(s.confidence * 100)}%</span>
+                              <span className="text-[10px] text-gray-400">{s.reusability}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Data Flow Section */}

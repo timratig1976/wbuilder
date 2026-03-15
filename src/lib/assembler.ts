@@ -1,4 +1,5 @@
 import { Section } from './store'
+import { SiteManifest } from './types/manifest'
 
 /**
  * Wraps every inline <script> block's content in an IIFE so that
@@ -152,6 +153,60 @@ ${body}
     obs.observe(document.body, { childList: true, subtree: true });
   })();
 </script>
+</body>
+</html>`
+}
+
+// ── v2: Manifest-aware page assembly ──────────────────────────────────────────
+export function assemblePageWithManifest(
+  sectionHtmlList: string[],
+  manifest: SiteManifest
+): string {
+  const tokens = manifest.design_tokens
+  const body = sectionHtmlList.map((html) => scopeScripts(html)).join('\n\n')
+
+  const fontName = tokens.typography.font_heading
+    .replace(/['"]/g, '')
+    .split(',')[0]
+    .trim()
+  const googleFontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap`
+
+  return `<!DOCTYPE html>
+<html lang="${manifest.site.language ?? 'de'}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${manifest.content.company_name}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="${googleFontUrl}" rel="stylesheet" />
+  <style>
+    :root {
+      --color-primary: ${tokens.colors.primary};
+      --color-secondary: ${tokens.colors.secondary};
+      --color-accent: ${tokens.colors.accent};
+      --color-highlight: ${tokens.colors.highlight};
+      --color-background: ${tokens.colors.background};
+      --color-surface: ${tokens.colors.surface};
+      --color-dark: ${tokens.colors.dark};
+      --color-text: ${tokens.colors.text};
+      --color-text-muted: ${tokens.colors.text_muted};
+      --font-heading: ${tokens.typography.font_heading};
+      --font-body: ${tokens.typography.font_body};
+    }
+    body { font-family: var(--font-body); }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body class="antialiased" style="background-color: var(--color-background); color: var(--color-text);">
+${body}
 </body>
 </html>`
 }

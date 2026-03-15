@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { nanoid } from 'nanoid'
+import { SiteManifest } from './types/manifest'
 
 export type SectionType =
   | 'navbar'
@@ -50,6 +51,7 @@ export interface Project {
   activePageId: string
   createdAt: number
   updatedAt: number
+  manifest?: import('./types/manifest').SiteManifest | null
 }
 
 interface BuilderStore {
@@ -59,6 +61,10 @@ interface BuilderStore {
   previewMode: 'desktop' | 'mobile'
   generating: boolean
   htmlSnapshots: Record<string, string>
+  manifest: SiteManifest | null
+  setManifest: (manifest: SiteManifest) => void
+  clearManifest: () => void
+  newProjectFromManifest: (manifest: SiteManifest) => void
 
   // Computed helpers
   page: Page
@@ -169,6 +175,40 @@ export const useBuilderStore = create<BuilderStore>()(
         previewMode: 'desktop',
         generating: false,
         htmlSnapshots: {},
+        manifest: null,
+        setManifest: (manifest) => set((s) => ({
+          manifest,
+          project: { ...s.project, manifest, updatedAt: Date.now() },
+        })),
+        clearManifest: () => set((s) => ({
+          manifest: null,
+          project: { ...s.project, manifest: null, updatedAt: Date.now() },
+        })),
+        newProjectFromManifest: (manifest) => {
+          const pages = manifest.pages.map((mp, i) =>
+            i === 0
+              ? freshPage(mp.title, mp.slug)
+              : freshPage(mp.title, mp.slug)
+          )
+          const project: Project = {
+            id: nanoid(),
+            name: manifest.content.company_name,
+            brand: {
+              primaryColor: manifest.design_tokens.colors.primary,
+              secondaryColor: manifest.design_tokens.colors.secondary,
+              fontFamily: manifest.design_tokens.typography.font_heading,
+              borderRadius: '',
+              tone: manifest.site.tone,
+              extraNotes: '',
+            },
+            pages,
+            activePageId: pages[0].id,
+            manifest,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          }
+          set(() => ({ ...withPage({ project }), manifest, selectedSectionId: null }))
+        },
 
         // Legacy compat shims
         savePage: () => get().saveProject(),
@@ -378,6 +418,7 @@ export const useBuilderStore = create<BuilderStore>()(
             sections: p.sections.map((sec) => ({ ...sec, generating: false })),
           })),
         })),
+        manifest: s.manifest,
       }),
     }
   )

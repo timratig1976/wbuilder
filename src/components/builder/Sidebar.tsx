@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   Layout, Sparkles, Plus, Trash2, GripVertical,
-  Loader2, ChevronDown, ChevronUp, Wand2, Paintbrush
+  Loader2, ChevronDown, ChevronUp, Wand2, Paintbrush, Zap, Globe
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLogStore } from '@/lib/logStore'
@@ -100,6 +100,7 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
   const {
     page,
     project,
+    manifest,
     selectedSectionId,
     generating,
     setPageTitle,
@@ -109,6 +110,7 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
     snapshotSections,
     revertSections,
     htmlSnapshots,
+    clearManifest,
   } = useBuilderStore()
 
   const { addLog } = useLogStore()
@@ -192,30 +194,65 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
         />
       </div>
 
-      {/* Prompt Area */}
-      <div className="px-4 py-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Sparkles className="w-4 h-4 text-indigo-500" />
-          <span className="text-sm font-semibold text-gray-700">AI Generator</span>
+      {/* Prompt Area — v2 manifest mode vs v1 prompt mode */}
+      {manifest ? (
+        <div className="px-4 py-4 border-b border-gray-200 bg-indigo-50">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Zap className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-semibold text-indigo-800">v2 Manifest loaded</span>
+          </div>
+          <div className="text-xs text-indigo-700 mb-1 font-medium truncate">{manifest.content?.company_name ?? project.name}</div>
+          <div className="flex items-center gap-1.5 text-[11px] text-indigo-500 mb-3">
+            <Globe className="w-3 h-3" />
+            <span>{manifest.pages?.length ?? 1} page{(manifest.pages?.length ?? 1) !== 1 ? 's' : ''}</span>
+            <span className="text-indigo-300">·</span>
+            <span>{manifest.style_paradigm}</span>
+            <span className="text-indigo-300">·</span>
+            <span>tokens ✓</span>
+          </div>
+          <Button
+            onClick={() => onGenerate('')}
+            disabled={generating}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
+          >
+            {generating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</>
+            ) : (
+              <><Sparkles className="w-4 h-4 mr-2" /> Generate This Page</>
+            )}
+          </Button>
+          <button
+            onClick={clearManifest}
+            className="w-full mt-1.5 text-[11px] text-indigo-400 hover:text-red-500 transition-colors"
+          >
+            ✕ Remove manifest (switch to v1)
+          </button>
         </div>
-        <Textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe your page... e.g. 'A SaaS landing page for a project management tool with pricing'"
-          className="text-sm resize-none h-24 bg-white"
-        />
-        <Button
-          onClick={() => { if (prompt.trim()) onGenerate(prompt.trim()) }}
-          disabled={generating || !prompt.trim()}
-          className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
-        >
-          {generating ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
-          ) : (
-            <><Wand2 className="w-4 h-4 mr-2" /> Generate Page</>
-          )}
-        </Button>
-      </div>
+      ) : (
+        <div className="px-4 py-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles className="w-4 h-4 text-indigo-500" />
+            <span className="text-sm font-semibold text-gray-700">AI Generator</span>
+          </div>
+          <Textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Describe your page... e.g. 'A SaaS landing page for a project management tool with pricing'"
+            className="text-sm resize-none h-24 bg-white"
+          />
+          <Button
+            onClick={() => { if (prompt.trim()) onGenerate(prompt.trim()) }}
+            disabled={generating || !prompt.trim()}
+            className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
+          >
+            {generating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
+            ) : (
+              <><Wand2 className="w-4 h-4 mr-2" /> Generate Page</>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Sections List */}
       <ScrollArea className="flex-1 px-4 py-3">
