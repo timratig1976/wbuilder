@@ -7,7 +7,14 @@ export interface CompletionParams {
   response_format?: { type: 'json_object' | 'text' }
 }
 
+import { AICallPass } from '../logStore'
+
+export interface AICallMeta {
+  pass?: AICallPass
+  label?: string
+}
+
 export interface AIProvider {
-  complete(params: CompletionParams): Promise<string>
-  stream(params: CompletionParams, onChunk: (chunk: string) => void): Promise<string>
+  complete(params: CompletionParams, meta?: AICallMeta): Promise<string>
+  stream(params: CompletionParams, onChunk: (chunk: string) => void, meta?: AICallMeta): Promise<string>
 }

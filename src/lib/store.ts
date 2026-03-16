@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { nanoid } from 'nanoid'
 import { SiteManifest } from './types/manifest'
+import { BriefingData, BriefingPreset, PresetSlot } from './types/briefing'
+export type { BriefingData, BriefingPreset, PresetSlot } from './types/briefing'
 
 export type SectionType =
   | 'navbar'
@@ -37,7 +39,16 @@ export interface Page {
 export interface BrandStyle {
   primaryColor: string
   secondaryColor: string
+  accentColor: string
+  highlightColor: string
+  backgroundColor: string
+  surfaceColor: string
+  darkColor: string
+  textColor: string
+  textMutedColor: string
   fontFamily: string
+  fontBody: string
+  headingWeight: string
   borderRadius: string
   tone: string
   extraNotes: string
@@ -54,6 +65,13 @@ export interface Project {
   manifest?: import('./types/manifest').SiteManifest | null
 }
 
+export interface HistoryEntry {
+  id: string
+  label: string
+  timestamp: number
+  snapshots: Record<string, string>
+}
+
 interface BuilderStore {
   project: Project
   savedProjects: Project[]
@@ -61,10 +79,15 @@ interface BuilderStore {
   previewMode: 'desktop' | 'mobile'
   generating: boolean
   htmlSnapshots: Record<string, string>
+  history: HistoryEntry[]
   manifest: SiteManifest | null
   setManifest: (manifest: SiteManifest) => void
   clearManifest: () => void
   newProjectFromManifest: (manifest: SiteManifest) => void
+
+  briefingPresets: Record<PresetSlot, BriefingPreset | null>
+  saveBriefingPreset: (slot: PresetSlot, data: BriefingData, label: string) => void
+  clearBriefingPreset: (slot: PresetSlot) => void
 
   // Computed helpers
   page: Page
@@ -88,6 +111,11 @@ interface BuilderStore {
   updateSectionHtmlAcrossPages: (pageId: string, sectionId: string, html: string) => void
   snapshotAllSections: () => void
   revertAllSections: () => void
+  pushHistory: (label: string) => void
+  revertToHistory: (id: string) => void
+  clearHistory: () => void
+  syncColorsAcrossPages: (oldColors: Record<string, string>, newColors: Record<string, string>) => void
+  injectCssTokens: () => void
   setSectionGenerating: (id: string, v: boolean) => void
   removeSection: (id: string) => void
   reorderSections: (from: number, to: number) => void
@@ -109,7 +137,16 @@ interface BuilderStore {
 const defaultBrand: BrandStyle = {
   primaryColor: '',
   secondaryColor: '',
+  accentColor: '',
+  highlightColor: '',
+  backgroundColor: '',
+  surfaceColor: '',
+  darkColor: '',
+  textColor: '',
+  textMutedColor: '',
   fontFamily: '',
+  fontBody: '',
+  headingWeight: '',
   borderRadius: '',
   tone: '',
   extraNotes: '',
@@ -175,7 +212,20 @@ export const useBuilderStore = create<BuilderStore>()(
         previewMode: 'desktop',
         generating: false,
         htmlSnapshots: {},
+        history: [],
         manifest: null,
+        briefingPresets: { A: null, B: null, C: null },
+        saveBriefingPreset: (slot, data, label) =>
+          set((s) => ({
+            briefingPresets: {
+              ...s.briefingPresets,
+              [slot]: { label, data, savedAt: Date.now() },
+            },
+          })),
+        clearBriefingPreset: (slot) =>
+          set((s) => ({
+            briefingPresets: { ...s.briefingPresets, [slot]: null },
+          })),
         setManifest: (manifest) => set((s) => ({
           manifest,
           project: { ...s.project, manifest, updatedAt: Date.now() },
@@ -194,12 +244,21 @@ export const useBuilderStore = create<BuilderStore>()(
             id: nanoid(),
             name: manifest.content.company_name,
             brand: {
-              primaryColor: manifest.design_tokens.colors.primary,
-              secondaryColor: manifest.design_tokens.colors.secondary,
-              fontFamily: manifest.design_tokens.typography.font_heading,
-              borderRadius: '',
-              tone: manifest.site.tone,
-              extraNotes: '',
+              primaryColor:    manifest.design_tokens.colors.primary,
+              secondaryColor:  manifest.design_tokens.colors.secondary,
+              accentColor:     manifest.design_tokens.colors.accent,
+              highlightColor:  manifest.design_tokens.colors.highlight,
+              backgroundColor: manifest.design_tokens.colors.background,
+              surfaceColor:    manifest.design_tokens.colors.surface,
+              darkColor:       manifest.design_tokens.colors.dark,
+              textColor:       manifest.design_tokens.colors.text,
+              textMutedColor:  manifest.design_tokens.colors.text_muted,
+              fontFamily:      manifest.design_tokens.typography.font_heading,
+              fontBody:        manifest.design_tokens.typography.font_body,
+              headingWeight:   manifest.design_tokens.typography.heading_weight,
+              borderRadius:    '',
+              tone:            manifest.site.tone,
+              extraNotes:      '',
             },
             pages,
             activePageId: pages[0].id,
@@ -222,7 +281,37 @@ export const useBuilderStore = create<BuilderStore>()(
         newPage: () => get().newProject(),
 
         setProjectName: (name) => set((s) => withPage({ project: { ...s.project, name, updatedAt: Date.now() } })),
-        setBrand: (brand) => set((s) => withPage({ project: { ...s.project, brand: { ...s.project.brand, ...brand }, updatedAt: Date.now() } })),
+        setBrand: (brand) => set((s) => {
+          const newBrand = { ...s.project.brand, ...brand }
+          const updatedManifest = s.manifest ? {
+            ...s.manifest,
+            design_tokens: {
+              ...s.manifest.design_tokens,
+              colors: {
+                ...s.manifest.design_tokens.colors,
+                primary:    newBrand.primaryColor   || s.manifest.design_tokens.colors.primary,
+                secondary:  newBrand.secondaryColor || s.manifest.design_tokens.colors.secondary,
+                accent:     newBrand.accentColor    || s.manifest.design_tokens.colors.accent,
+                highlight:  newBrand.highlightColor || s.manifest.design_tokens.colors.highlight,
+                background: newBrand.backgroundColor|| s.manifest.design_tokens.colors.background,
+                surface:    newBrand.surfaceColor   || s.manifest.design_tokens.colors.surface,
+                dark:       newBrand.darkColor      || s.manifest.design_tokens.colors.dark,
+                text:       newBrand.textColor      || s.manifest.design_tokens.colors.text,
+                text_muted: newBrand.textMutedColor || s.manifest.design_tokens.colors.text_muted,
+              },
+              typography: {
+                ...s.manifest.design_tokens.typography,
+                font_heading:   newBrand.fontFamily     || s.manifest.design_tokens.typography.font_heading,
+                font_body:      newBrand.fontBody       || s.manifest.design_tokens.typography.font_body,
+                heading_weight: newBrand.headingWeight  || s.manifest.design_tokens.typography.heading_weight,
+              },
+            },
+          } : s.manifest
+          return {
+            ...withPage({ project: { ...s.project, brand: newBrand, updatedAt: Date.now() } }),
+            manifest: updatedManifest,
+          }
+        }),
 
         setActivePageId: (id) => set((s) => ({
           ...withPage({ project: { ...s.project, activePageId: id } }),
@@ -331,6 +420,78 @@ export const useBuilderStore = create<BuilderStore>()(
             return withPage({ project })
           }),
 
+        pushHistory: (label) =>
+          set((s) => {
+            const snap: Record<string, string> = {}
+            s.project.pages.forEach((p) => {
+              p.sections.forEach((sec) => { snap[sec.id] = sec.html })
+            })
+            const entry: HistoryEntry = { id: nanoid(), label, timestamp: Date.now(), snapshots: snap }
+            return { history: [entry, ...s.history].slice(0, 20) }
+          }),
+
+        revertToHistory: (id) =>
+          set((s) => {
+            const entry = s.history.find((h) => h.id === id)
+            if (!entry) return s
+            const project = {
+              ...s.project,
+              updatedAt: Date.now(),
+              pages: s.project.pages.map((p) => ({
+                ...p,
+                sections: p.sections.map((sec) =>
+                  entry.snapshots[sec.id] != null ? { ...sec, html: entry.snapshots[sec.id] } : sec
+                ),
+              })),
+            }
+            return withPage({ project })
+          }),
+
+        clearHistory: () => set({ history: [] }),
+
+        // Strip legacy per-section :root blocks — assembler injects tokens globally from manifest
+        injectCssTokens: () =>
+          set((s) => {
+            const project = {
+              ...s.project,
+              updatedAt: Date.now(),
+              pages: s.project.pages.map((p) => ({
+                ...p,
+                sections: p.sections.map((sec) => ({
+                  ...sec,
+                  html: sec.html.replace(/<style>:root\{[^<]*\}<\/style>/g, ''),
+                })),
+              })),
+            }
+            return withPage({ project })
+          }),
+
+        syncColorsAcrossPages: (oldColors, newColors) =>
+          set((s) => {
+            const pairs = Object.entries(oldColors)
+              .map(([key, oldVal]) => ({ old: oldVal, next: newColors[key] }))
+              .filter((p) => p.old && p.next && p.old !== p.next)
+            if (pairs.length === 0) return s
+            const project = {
+              ...s.project,
+              updatedAt: Date.now(),
+              pages: s.project.pages.map((p) => ({
+                ...p,
+                sections: p.sections.map((sec) => {
+                  let html = sec.html
+                  pairs.forEach(({ old: o, next: n }) => {
+                    // replace all case-insensitive hex occurrences
+                    html = html.split(o.toLowerCase()).join(n)
+                    html = html.split(o.toUpperCase()).join(n)
+                    html = html.split(o).join(n)
+                  })
+                  return { ...sec, html }
+                }),
+              })),
+            }
+            return withPage({ project })
+          }),
+
         updateSectionHtml: (id, html) =>
           set((s) => withPage({
             project: updateActivePage(s.project, (p) => ({
@@ -403,6 +564,11 @@ export const useBuilderStore = create<BuilderStore>()(
     },
     {
       name: 'pagecraft-store-v2',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.page = getActivePage(state.project)
+        }
+      },
       partialize: (s) => ({
         project: {
           ...s.project,
@@ -419,6 +585,8 @@ export const useBuilderStore = create<BuilderStore>()(
           })),
         })),
         manifest: s.manifest,
+        briefingPresets: s.briefingPresets,
+        history: s.history,
       }),
     }
   )

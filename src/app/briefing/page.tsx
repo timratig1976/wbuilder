@@ -3,27 +3,24 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useBuilderStore } from '@/lib/store'
+import type { BriefingData, PresetSlot } from '@/lib/store'
+import type { PageDef } from '@/lib/types/briefing'
 import { SiteManifest, StyleParadigm } from '@/lib/types/manifest'
 import { toast } from 'sonner'
+import { PageTopbar } from '@/components/ui/PageTopbar'
 import {
   Zap, ChevronRight, ChevronLeft, Loader2, Check, X,
   Building2, Users, Palette, Layout, Sparkles, Globe, Plus, Trash2,
-  Library, Tag, ChevronDown
+  Library, Tag, ChevronDown, BookMarked, Save, FolderOpen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────
 
 const SECTION_OPTIONS = [
   'hero', 'pain-points', 'services', 'features', 'process',
   'stats', 'testimonials', 'pricing', 'faq', 'cta', 'footer',
 ]
-
-interface PageDef {
-  title: string
-  slug: string
-  sections: string[]
-}
 
 interface PatternEntry {
   id: string; name: string; description: string; type: string
@@ -31,30 +28,6 @@ interface PatternEntry {
   preview_description: string; visual_weight: string
   implementation?: { css_snippet?: string; html_snippet?: string; placeholder?: string }
 }
-
-interface BriefingData {
-  company_name: string
-  industry: string
-  tagline: string
-  usp: string
-  adjectives: string[]
-  tone: string
-  primary_cta: string
-  personas: string[]
-  pain_points: string[]
-  style_paradigm: StyleParadigm
-  animation_budget: 'none' | 'subtle' | 'moderate' | 'rich'
-  navbar_style: 'sticky-blur' | 'static' | 'transparent-hero' | 'hidden-scroll'
-  navbar_mobile: 'hamburger-dropdown' | 'hamburger-overlay' | 'hamburger-sidebar' | 'logo-cta-only'
-  brand_colors?: Record<string, string>
-  has_existing_brand: boolean
-  primary_color: string
-  accent_color: string
-  pages: PageDef[]
-  selected_pattern_ids: string[]
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────
 
 const INDUSTRIES = [
   'saas-tech', 'recruiting-b2b', 'construction', 'consulting-law',
@@ -1007,6 +980,230 @@ const defaultData: BriefingData = {
   ],
 }
 
+const PRESET_SLOTS: PresetSlot[] = ['A', 'B', 'C']
+
+const DEFAULT_PRESETS: Record<PresetSlot, { label: string; data: BriefingData }> = {
+  A: {
+    label: 'Baumanagement Nordost GmbH',
+    data: {
+      company_name: 'Baumanagement Nordost GmbH',
+      industry: 'construction',
+      tagline: 'Wir bauen nicht nur Häuser — wir schaffen Heimat.',
+      usp: 'Regionaler Bauträger mit 25 Jahren Erfahrung — schlüsselfertige Häuser in 6–18 Monaten. Feste Preise, kein Makler, ein Ansprechpartner vom Grundstück bis zur Schlüsselübergabe.',
+      adjectives: ['vertrauenswürdig', 'persönlich', 'regional'],
+      tone: 'professional',
+      primary_cta: 'Beratungsgespräch vereinbaren',
+      personas: [
+        'Familie mit Kindern die endlich Planungssicherheit beim Hausbau will — kein Budget-Chaos, ein Ansprechpartner',
+        'Kapitalanleger 45+ der sichere Mietobjekte in Norddeutschland sucht ohne Makler',
+        'Rentnerpaar das barrierefreien Neubau in Stadtlage sucht — weg vom großen Haus',
+      ],
+      pain_points: [
+        'Bauprojekte laufen aus dem Ruder — Kosten und Zeit nicht kontrollierbar',
+        'Kein Überblick über den Baufortschritt, immer der Falsche am Telefon',
+        'Schöne Renderings aber keine echten Referenzen bei anderen Anbietern',
+        'Finanzierung unklar — man weiß nicht wo man anfangen soll',
+      ],
+      style_paradigm: 'bold-expressive',
+      animation_budget: 'subtle',
+      navbar_style: 'sticky-blur',
+      navbar_mobile: 'hamburger-dropdown',
+      has_existing_brand: true,
+      primary_color: '#2C3E2D',
+      accent_color: '#C8963E',
+      selected_pattern_ids: [],
+      pages: [
+        { title: 'Startseite', slug: '/', sections: ['hero', 'pain-points', 'services', 'process', 'stats', 'testimonials', 'cta', 'footer'] },
+        { title: 'Projekte', slug: '/projekte', sections: ['hero', 'features', 'cta', 'footer'] },
+        { title: 'Kontakt', slug: '/kontakt', sections: ['hero', 'cta', 'footer'] },
+      ],
+    },
+  },
+  B: {
+    label: 'Talentbridge HR Solutions GmbH',
+    data: {
+      company_name: 'Talentbridge HR Solutions GmbH',
+      industry: 'recruiting-b2b',
+      tagline: 'Wir finden nicht nur Kandidaten — wir finden die Richtigen.',
+      usp: 'Recruiting-Boutique für Tech- und SaaS-Unternehmen. Max. 5 aktive Mandate gleichzeitig. Ø 34 Tage Time-to-Hire. Erfolgshonorar, kein Retainer.',
+      adjectives: ['ambitioniert', 'professionell', 'modern'],
+      tone: 'bold',
+      primary_cta: 'Mandat besprechen',
+      personas: [
+        'HR-Leiterin 50-300-Personen SaaS die Senior-Position seit Monaten nicht besetzt bekommt',
+        'Series-A-Gründer der erstes Sales-Team aufbauen will ohne selbst zu sourcen',
+        'CFO der diskret Schlüsselposition nachbesetzen will ohne interne Unruhe',
+      ],
+      pain_points: [
+        'Interne Recruiter haben kein Netzwerk für Senior-Positionen',
+        'Große Agenturen behandeln kleine Mandate nicht ernst',
+        'Kandidaten passen auf Papier aber nicht zur Kultur',
+        'Prozess dauert Monate und kostet intern zu viel Attention',
+      ],
+      style_paradigm: 'tech-dark',
+      animation_budget: 'subtle',
+      navbar_style: 'sticky-blur',
+      navbar_mobile: 'hamburger-dropdown',
+      has_existing_brand: true,
+      primary_color: '#0A0F1E',
+      accent_color: '#4F6EF7',
+      selected_pattern_ids: [],
+      pages: [
+        { title: 'Startseite', slug: '/', sections: ['hero', 'stats', 'pain-points', 'services', 'process', 'testimonials', 'cta', 'footer'] },
+        { title: 'Leistungen', slug: '/leistungen', sections: ['hero', 'features', 'process', 'cta', 'footer'] },
+        { title: 'Kontakt', slug: '/kontakt', sections: ['hero', 'cta', 'footer'] },
+      ],
+    },
+  },
+  C: {
+    label: 'Küstenröst GmbH',
+    data: {
+      company_name: 'Küstenröst GmbH',
+      industry: 'e-commerce',
+      tagline: 'Frisch geröstet. Direkt vom Hafen.',
+      usp: 'Micro-Rösterei aus Rostock. Specialty Coffee in Kleinchargen, Versand innerhalb 24h nach der Röstung. Direkthandel mit Kaffeebauern — Einzelursprung, volle Transparenz.',
+      adjectives: ['persönlich', 'nachhaltig', 'regional'],
+      tone: 'friendly',
+      primary_cta: 'Jetzt probieren',
+      personas: [
+        'Kaffee-Enthusiast 28-45 der Filterkaffee entdeckt hat und Geschmack statt Marke sucht',
+        'Geschenkkäufer der etwas Besonderes aus der Region mitbringen will',
+        'Café-Betreiber in MV der lokale Rösterei als Qualitätsmerkmal sucht',
+      ],
+      pain_points: [
+        'Supermarkt-Kaffee schmeckt immer gleich — keine Transparenz über Herkunft',
+        'Große Online-Röstereien fühlen sich anonym an — kein Vertrauen',
+        'Specialty Coffee wirkt kompliziert und elitär — wo anfangen?',
+        'Röstdatum unklar — Kaffee liegt Wochen im Lager bevor er ankommt',
+      ],
+      style_paradigm: 'bold-expressive',
+      animation_budget: 'subtle',
+      navbar_style: 'transparent-hero',
+      navbar_mobile: 'hamburger-overlay',
+      has_existing_brand: true,
+      primary_color: '#2A1810',
+      accent_color: '#C4622D',
+      selected_pattern_ids: [],
+      pages: [
+        { title: 'Startseite', slug: '/', sections: ['hero', 'features', 'stats', 'testimonials', 'cta', 'footer'] },
+        { title: 'Shop', slug: '/shop', sections: ['hero', 'features', 'cta', 'footer'] },
+        { title: 'Über uns', slug: '/ueber-uns', sections: ['hero', 'services', 'cta', 'footer'] },
+      ],
+    },
+  },
+}
+
+function timeAgoShort(ts: number): string {
+  const diff = Date.now() - ts
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+function BriefingPresets({
+  data,
+  onLoad,
+}: {
+  data: BriefingData
+  onLoad: (d: BriefingData) => void
+}) {
+  const { briefingPresets, saveBriefingPreset, clearBriefingPreset } = useBuilderStore()
+
+  useEffect(() => {
+    PRESET_SLOTS.forEach((slot) => {
+      if (!briefingPresets[slot]) {
+        const def = DEFAULT_PRESETS[slot]
+        saveBriefingPreset(slot, def.data, def.label)
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleSave(slot: PresetSlot) {
+    const label = data.company_name.trim() || `Preset ${slot}`
+    saveBriefingPreset(slot, data, label)
+    toast.success(`Saved to slot ${slot}`)
+  }
+
+  function handleLoad(slot: PresetSlot) {
+    const preset = briefingPresets[slot]
+    if (!preset) return
+    onLoad(preset.data)
+    toast.success(`Loaded "${preset.label}"`)
+  }
+
+  function handleClear(slot: PresetSlot) {
+    clearBriefingPreset(slot)
+    toast(`Slot ${slot} cleared`)
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-2">
+        <BookMarked className="w-3.5 h-3.5 text-gray-400" />
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Briefing Presets</span>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {PRESET_SLOTS.map((slot) => {
+          const preset = briefingPresets[slot]
+          return (
+            <div
+              key={slot}
+              className={`rounded-xl border p-3 transition-all ${
+                preset ? 'bg-white border-indigo-200 shadow-sm' : 'bg-gray-50 border-gray-200 border-dashed'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-xs font-black ${ preset ? 'text-indigo-600' : 'text-gray-300'}`}>
+                  Slot {slot}
+                </span>
+                {preset && (
+                  <span className="text-[10px] text-gray-400">{timeAgoShort(preset.savedAt)}</span>
+                )}
+              </div>
+
+              {preset ? (
+                <p className="text-xs font-semibold text-gray-700 truncate mb-3">{preset.label}</p>
+              ) : (
+                <p className="text-xs text-gray-400 mb-3">Empty</p>
+              )}
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handleSave(slot)}
+                  className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors"
+                >
+                  <Save className="w-3 h-3" /> Save
+                </button>
+                {preset && (
+                  <>
+                    <button
+                      onClick={() => handleLoad(slot)}
+                      className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    >
+                      <FolderOpen className="w-3 h-3" /> Load
+                    </button>
+                    <button
+                      onClick={() => handleClear(slot)}
+                      className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                      title="Clear slot"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function BriefingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -1049,6 +1246,11 @@ export default function BriefingPage() {
 
   function update(partial: Partial<BriefingData>) {
     setData((prev) => ({ ...prev, ...partial }))
+  }
+
+  function loadPresetData(d: BriefingData) {
+    setData(d)
+    setStep(0)
   }
 
   function canProceed(): boolean {
@@ -1141,19 +1343,12 @@ export default function BriefingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white">
+      <PageTopbar title="Briefing Wizard" backHref="/projects" backLabel="Projects" />
+      <div className="flex items-center justify-center p-8">
       <div className="w-full max-w-2xl">
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="font-bold text-gray-900 text-xl">wbuilder v2</h1>
-            <p className="text-xs text-gray-500">{isEditMode ? 'Manifest bearbeiten — bestehende Daten werden überschrieben' : 'Briefing Wizard — generiert ein vollständiges Site Manifest'}</p>
-          </div>
-        </div>
+        <BriefingPresets data={data} onLoad={loadPresetData} />
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -1200,6 +1395,7 @@ export default function BriefingPage() {
         <p className="text-center text-xs text-gray-400 mt-4">
           Das Manifest wird einmalig generiert und steuert alle nachfolgenden Sektionen.
         </p>
+      </div>
       </div>
     </div>
   )

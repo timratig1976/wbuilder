@@ -63,10 +63,6 @@ export default function Home() {
           >
             <Database className="w-4 h-4" /> Block Library & Scraper
           </Link>
-          <span className="text-indigo-600">·</span>
-          <p className="text-xs text-indigo-400">
-            Requires <code className="bg-white/10 px-1.5 py-0.5 rounded">OPENAI_API_KEY</code> in <code className="bg-white/10 px-1.5 py-0.5 rounded">.env.local</code>
-          </p>
         </div>
       </div>
     </div>

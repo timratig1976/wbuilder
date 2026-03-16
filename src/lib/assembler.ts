@@ -1,6 +1,66 @@
 import { Section } from './store'
 import { SiteManifest } from './types/manifest'
 
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+function buildGoogleFontUrl(manifest: SiteManifest): string {
+  const t = manifest.design_tokens.typography
+  const names = [
+    t.font_heading.replace(/['",]/g, '').split(',')[0].trim(),
+    t.font_body.replace(/['",]/g, '').split(',')[0].trim(),
+  ].filter((n) => n && !['sans-serif','serif','monospace','system-ui'].includes(n))
+  const unique = [...new Set(names)]
+  if (!unique.length) return ''
+  const families = unique.map((n) => `family=${encodeURIComponent(n)}:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900`).join('&')
+  return `https://fonts.googleapis.com/css2?${families}&display=swap`
+}
+
+function buildRootCss(manifest: SiteManifest): string {
+  const { colors, typography } = manifest.design_tokens
+  return `:root {
+  --color-primary:    ${colors.primary};
+  --color-secondary:  ${colors.secondary};
+  --color-accent:     ${colors.accent};
+  --color-highlight:  ${colors.highlight};
+  --color-background: ${colors.background};
+  --color-surface:    ${colors.surface};
+  --color-dark:       ${colors.dark};
+  --color-text:       ${colors.text};
+  --color-text-muted: ${colors.text_muted};
+  --font-heading:     ${typography.font_heading};
+  --font-body:        ${typography.font_body};
+  --heading-weight:   ${typography.heading_weight};
+  --tracking-heading: ${typography.tracking_heading};
+  --lh-heading:       ${typography.line_height_heading};
+}`
+}
+
+function buildBaseStyle(manifest: SiteManifest): string {
+  return `${buildRootCss(manifest)}
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: var(--heading-weight);
+    letter-spacing: var(--tracking-heading);
+    line-height: var(--lh-heading);
+  }
+  /* Strip any stray per-section :root blocks injected by older generator runs */
+  /* (harmless duplicate — browser last-write-wins but keeping DOM clean) */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }`
+}
+
 /**
  * Wraps every inline <script> block's content in an IIFE so that
  * `const`, `let`, and `var` declarations from different sections
@@ -43,18 +103,28 @@ ${body}
 </html>`
 }
 
-export function assemblePreview(sections: Section[]): string {
+export function assemblePreview(sections: Section[], manifest?: SiteManifest | null): string {
   const body = sections.map((s) => `<div data-section-id="${s.id}">${scopeScripts(s.html)}</div>`).join('\n\n')
+
+  const fontLink = manifest
+    ? (() => { const url = buildGoogleFontUrl(manifest); return url ? `<link href="${url}" rel="stylesheet" />` : '' })()
+    : `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />`
+
+  const baseStyle = manifest
+    ? buildBaseStyle(manifest)
+    : `*, *::before, *::after { box-sizing: border-box; } html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; } body { font-family: 'Inter', sans-serif; }`
+
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${manifest?.site?.language ?? 'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  ${fontLink}
   <style>
-    body { font-family: 'Inter', sans-serif; }
+    ${baseStyle}
     [data-section-id] { position: relative; cursor: pointer; transition: outline 0.15s; }
     [data-section-id]:hover { outline: 3px solid #6366f1; outline-offset: -2px; }
     [data-section-id].selected { outline: 3px solid #6366f1; outline-offset: -2px; box-shadow: inset 0 0 0 3px #6366f1; }
@@ -157,19 +227,13 @@ ${body}
 </html>`
 }
 
-// ── v2: Manifest-aware page assembly ──────────────────────────────────────────
+// ── v2: Manifest-aware page assembly (export / full HTML for download) ────────
 export function assemblePageWithManifest(
   sectionHtmlList: string[],
   manifest: SiteManifest
 ): string {
-  const tokens = manifest.design_tokens
   const body = sectionHtmlList.map((html) => scopeScripts(html)).join('\n\n')
-
-  const fontName = tokens.typography.font_heading
-    .replace(/['"]/g, '')
-    .split(',')[0]
-    .trim()
-  const googleFontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap`
+  const fontUrl = buildGoogleFontUrl(manifest)
 
   return `<!DOCTYPE html>
 <html lang="${manifest.site.language ?? 'de'}" class="scroll-smooth">
@@ -179,33 +243,13 @@ export function assemblePageWithManifest(
   <title>${manifest.content.company_name}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="${googleFontUrl}" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  ${fontUrl ? `<link href="${fontUrl}" rel="stylesheet" />` : ''}
   <style>
-    :root {
-      --color-primary: ${tokens.colors.primary};
-      --color-secondary: ${tokens.colors.secondary};
-      --color-accent: ${tokens.colors.accent};
-      --color-highlight: ${tokens.colors.highlight};
-      --color-background: ${tokens.colors.background};
-      --color-surface: ${tokens.colors.surface};
-      --color-dark: ${tokens.colors.dark};
-      --color-text: ${tokens.colors.text};
-      --color-text-muted: ${tokens.colors.text_muted};
-      --font-heading: ${tokens.typography.font_heading};
-      --font-body: ${tokens.typography.font_body};
-    }
-    body { font-family: var(--font-body); }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-      }
-    }
+    ${buildBaseStyle(manifest)}
   </style>
 </head>
-<body class="antialiased" style="background-color: var(--color-background); color: var(--color-text);">
+<body class="antialiased">
 ${body}
 </body>
 </html>`

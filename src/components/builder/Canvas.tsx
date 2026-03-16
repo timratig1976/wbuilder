@@ -6,7 +6,7 @@ import { assemblePreview } from '@/lib/assembler'
 import { Loader2, Monitor, Smartphone, Plus } from 'lucide-react'
 
 export function Canvas() {
-  const { page, selectedSectionId, previewMode, generating, setSelectedSection, setPreviewMode } =
+  const { page, manifest, selectedSectionId, previewMode, generating, setSelectedSection, setPreviewMode } =
     useBuilderStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -18,7 +18,7 @@ export function Canvas() {
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
-    const html = assemblePreview(sections)
+    const html = assemblePreview(sections, manifest)
     const doc = iframe.contentDocument || iframe.contentWindow?.document
     if (!doc) return
     doc.open()

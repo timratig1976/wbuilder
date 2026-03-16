@@ -119,7 +119,7 @@ Generate the manifest following this exact schema:
       "id": "home",
       "slug": "index",
       "title": "Startseite",
-      "sections": ["hero", "pain-points", "services", "process", "cta"],
+      "sections": ["navbar", "hero", "pain-points", "services", "process", "cta", "footer"],
       "meta_description": "Write a compelling meta description"
     }
   ],
@@ -173,54 +173,102 @@ Generate the manifest following this exact schema:
 
 export function buildPass1System(dict: StyleDictionary, manifest: SiteManifest): string {
   const tokens = manifest.design_tokens
-  return `You are a precision HTML developer building section scaffolding. Structure and content only — NO animations, NO @keyframes, NO fancy backgrounds.
+  const { layout, typography, color, decoration } = dict.rules
+  const hp = dict.html_patterns
 
-OUTPUT FORMAT: Respond with ONLY raw HTML starting with < and ending with >. No markdown, no code fences, no explanation.
+  // Build the concrete HTML patterns block from the style dictionary
+  const patternsBlock = Object.entries(hp)
+    .map(([key, val]) => `${key}:\n  ${val}`)
+    .join('\n')
 
-STYLE DICTIONARY — MANDATORY CONSTRAINTS:
-Paradigm: ${dict.paradigm}
-Forbidden patterns (NEVER use): ${JSON.stringify(dict.forbidden_patterns)}
-Required patterns (ALWAYS include): ${JSON.stringify(dict.required_patterns)}
+  return `You are an expert frontend developer. Generate a single HTML section — structure and content only.
+NO @keyframes, NO animations, NO transition-* in Pass 1. That is Pass 2's job.
 
-CSS CUSTOM PROPERTIES (use these, never hardcode hex values):
-:root {
-  --color-primary: ${tokens.colors.primary};
-  --color-secondary: ${tokens.colors.secondary};
-  --color-accent: ${tokens.colors.accent};
-  --color-highlight: ${tokens.colors.highlight};
-  --color-background: ${tokens.colors.background};
-  --color-surface: ${tokens.colors.surface};
-  --color-dark: ${tokens.colors.dark};
-  --color-text: ${tokens.colors.text};
-  --color-text-muted: ${tokens.colors.text_muted};
-  --font-heading: ${tokens.typography.font_heading};
-  --font-body: ${tokens.typography.font_body};
-}
+OUTPUT: Raw HTML only. Start with < end with >. Zero markdown, zero code fences, zero explanation.
 
-TYPE SCALE (use ONLY these classes for text sizing):
-hero_h1: ${tokens.type_scale.hero_h1}
-section_h2: ${tokens.type_scale.section_h2}
-card_h3: ${tokens.type_scale.card_h3}
-eyebrow: ${tokens.type_scale.eyebrow}
-cta_button: ${tokens.type_scale.cta_button}
+══════════════════════════════════
+DESIGN SYSTEM: ${dict.paradigm.toUpperCase()}
+══════════════════════════════════
+Use EXACTLY these HTML patterns from the design system — not alternatives:
+${patternsBlock}
+
+LAYOUT RULES (non-negotiable):
+- Outer <section> = full-width background + vertical padding (${layout.section_padding})
+- Inner container = max-width centering: ${layout.max_width} with px-5 md:px-8
+- ALL content lives inside the container div — never directly in <section>
+- Max columns: ${layout.columns_max} — grids always start grid-cols-1 then md:grid-cols-X
+- Overlaps allowed: ${layout.overlaps_allowed} | Full bleed: ${layout.full_bleed_allowed} | Negative margins: ${layout.negative_margin_allowed}
+
+TYPOGRAPHY RULES:
+- Heading size hero: ${typography.heading_size_hero}
+- Heading size section: ${typography.heading_size_section}
+- Tracking: ${typography.tracking}
+- Gradient text: ${typography.gradient_text_allowed ? 'ALLOWED — use bg-gradient-to-r bg-clip-text text-transparent' : 'NOT ALLOWED'}
+
+COLOR SYSTEM (${color.base} base):
+- Dark sections: ${color.dark_sections_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
+- Gradients: ${color.gradient_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
+
+DECORATION:
+- Glassmorphism: ${decoration.glassmorphism} | Mesh gradient: ${decoration.mesh_gradient}
+- Border glow: ${decoration.border_glow} | Geometric shapes: ${decoration.geometric_shapes}
+- Diagonal cuts: ${decoration.diagonal_cuts ?? false} | Concave sections: ${decoration.concave_sections ?? false}
+→ Use <!-- [BG: geometric-shapes | opacity: 0.08] --> as placeholder (resolved in Pass 2)
+
+FORBIDDEN (never use): ${dict.forbidden_patterns.join(' | ')}
+REQUIRED (always include): ${dict.required_patterns.join(' | ')}
+
+══════════════════════════════════
+CSS CUSTOM PROPERTIES
+══════════════════════════════════
+These vars are defined globally in <head> — do NOT redefine :root in section HTML.
+Always use var() — NEVER hardcode hex values.
+
+BACKGROUND TOKENS:
+  style="background-color: var(--color-background)"  → default page bg (${tokens.colors.background})
+  style="background-color: var(--color-surface)"     → alternating/card bg (${tokens.colors.surface})
+  style="background-color: var(--color-dark)"        → dark hero/CTA sections (${tokens.colors.dark})
+  style="background-color: var(--color-primary)"     → strong CTA/accent sections (${tokens.colors.primary})
+
+TEXT TOKENS:
+  style="color: var(--color-text)"        → headings + body on light bg
+  style="color: var(--color-text-muted)"  → subtitles, captions, nav links
+  style="color: white" or color:#fff      → text on dark/primary backgrounds
+
+ACCENT TOKENS:
+  style="background-color: var(--color-primary)"   → primary buttons, main CTA
+  style="background-color: var(--color-accent)"    → secondary CTAs, hover fills
+  style="color: var(--color-accent)"               → inline links, icon color, emphasis
+  style="color: var(--color-highlight)"            → highlighted words in headings
+  style="background-color: var(--color-secondary)" → feature icons bg, tag badges
+
+FONT TOKENS (set on <body> globally, apply to override headings):
+  style="font-family: var(--font-heading)"  → explicit heading override if needed
+  style="font-family: var(--font-body)"     → body text (already inherited)
+
+TYPE SCALE (use these Tailwind classes for text sizing):
+  Hero H1:    ${tokens.type_scale.hero_h1}
+  Section H2: ${tokens.type_scale.section_h2}
+  Card H3:    ${tokens.type_scale.card_h3}
+  Eyebrow:    ${tokens.type_scale.eyebrow}
+  CTA button: ${tokens.type_scale.cta_button}
 
 SPACING:
-section_padding_light: ${tokens.spacing.section_padding_light}
-section_padding_heavy: ${tokens.spacing.section_padding_heavy}
-container: ${tokens.spacing.container_max} ${tokens.spacing.container_padding}
+  Section light: ${tokens.spacing.section_padding_light}
+  Section heavy: ${tokens.spacing.section_padding_heavy}
+  Container: ${tokens.spacing.container_max} ${tokens.spacing.container_padding}
 
-RESPONSIVE RULES (non-negotiable):
+══════════════════════════════════
+RESPONSIVE (non-negotiable)
+══════════════════════════════════
 ${manifest.pass1_prompt_rules.rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 
-SITE CONTEXT:
-Company: ${manifest.content.company_name}
-Industry: ${manifest.site.industry}
-Tone: ${manifest.site.tone}
-Adjectives: ${manifest.site.adjectives.join(', ')}${manifest.selected_patterns?.length ? `
+SITE:
+Company: ${manifest.content.company_name} | Industry: ${manifest.site.industry}
+Tone: ${manifest.site.tone} | Adjectives: ${manifest.site.adjectives.join(', ')}${manifest.selected_patterns?.length ? `
 
-SELECTED DESIGN PATTERNS (apply these to every section — non-negotiable):
-${manifest.selected_patterns.map((p, i) => `${i + 1}. [${p.type}] ${p.name}: ${p.description}${p.preview_description ? ` — ${p.preview_description}` : ''}${p.implementation?.css_snippet ? `\n   CSS: ${p.implementation.css_snippet.slice(0, 200)}` : ''}${p.implementation?.placeholder ? `\n   Placeholder: ${p.implementation.placeholder}` : ''}`).join('\n')}
-These patterns define the visual identity of this site. Every section MUST incorporate the applicable patterns from this list.` : ''}`
+DESIGN PATTERNS (mandatory — apply to every section):
+${manifest.selected_patterns.map((p, i) => `${i + 1}. [${p.type}] ${p.name}: ${p.description}${p.preview_description ? ` — ${p.preview_description}` : ''}${p.implementation?.css_snippet ? `\n   CSS: ${p.implementation.css_snippet.slice(0, 200)}` : ''}${p.implementation?.placeholder ? `\n   Placeholder: ${p.implementation.placeholder}` : ''}`).join('\n')}` : ''}`
 }
 
 export function buildPass1User(
@@ -229,6 +277,49 @@ export function buildPass1User(
   referenceHtml?: string | null
 ): string {
   const content = manifest.content
+  const nav = manifest.navbar
+
+  if (sectionType === 'navbar') {
+    return `Create a responsive navbar for:
+Company: ${content.company_name}
+Style: ${nav.style}
+Height: ${nav.height}
+Desktop layout: ${nav.layout_desktop}
+Nav links: ${nav.links.join(', ')}
+CTA button: ${nav.cta_button ? `Yes — label: "${nav.cta_label}"` : 'No'}
+Mobile menu: ${nav.mobile_menu}
+Tone: ${manifest.site.tone}
+
+NAVBAR OUTPUT RULES (non-negotiable):
+- Outermost element MUST be <nav> — NOT <section>
+- Apply to <nav>: class="${nav.height} w-full flex items-center justify-between px-5 md:px-8"
+${nav.style === 'sticky-blur' ? '- Add to <nav>: class "sticky top-0 z-50 backdrop-blur-md" + style="background-color: color-mix(in srgb, var(--color-background) 85%, transparent)"' : ''}
+${nav.style === 'transparent-hero' ? '- Add to <nav>: class "absolute top-0 left-0 right-0 z-50" with transparent background' : ''}
+- Logo: <a href="#"> with company name as styled text (font-bold, font-family: var(--font-heading))
+- Desktop links: <ul class="hidden md:flex items-center gap-6"> — text-sm, color: var(--color-text-muted)
+- CTA button: hidden on mobile (hidden md:flex), background: var(--color-primary), text white, rounded, px-4 py-2
+- Hamburger icon: visible only mobile (md:hidden), opens a mobile overlay menu below
+- Mobile menu: full-width dropdown below nav, hidden by default, toggled via JS onclick
+- ALL colors via var(--color-*) — no hardcoded hex values`
+  }
+
+  if (sectionType === 'footer') {
+    return `Create a footer for:
+Company: ${content.company_name}
+Nav links: ${nav.links.join(', ')}
+Primary CTA: ${content.primary_cta}
+Trust Signals: ${content.trust_signals.join(', ')}
+Tone: ${manifest.site.tone}
+
+FOOTER OUTPUT RULES (non-negotiable):
+- Outermost element MUST be <footer> — NOT <section>
+- Dark background: style="background-color: var(--color-dark)"
+- Inner container: max-w-7xl mx-auto px-5 md:px-8 py-12 md:py-16
+- Include: company name (bold, var(--font-heading)), nav links row, copyright line
+- Optional: short tagline below company name
+- ALL colors via var(--color-*) — no hardcoded hex values`
+  }
+
   return `Create a "${sectionType}" section for:
 Company: ${content.company_name}
 USP: ${content.company_usp}
@@ -277,32 +368,40 @@ ${pass1Html}`
 export const PASS3_SYSTEM = `You are an HTML/CSS validator. Respond ONLY with valid JSON. No text, no markdown.`
 
 export function buildPass3User(html: string, autoFlags: string[]): string {
-  return `Validate this HTML section against the checklist. Respond with ONLY JSON.
+  return `Validate this HTML section. Respond with ONLY valid JSON — no markdown, no text.
 
 HTML:
 ${html}
 
-AUTO-FLAG RULES (check each):
+CHECKLIST:
+
+STRUCTURE (critical):
+- For navbar: outermost element must be <nav>, NOT <section> — if it is <nav>, structure is valid
+- For footer: outermost element must be <footer>, NOT <section> — if it is <footer>, structure is valid
+- For all other sections: outermost element must be <section>
+- Is there an inner container div with max-w-* mx-auto classes? (not required for navbar)
+- Is ALL content inside that container? (not required for navbar)
+- Does the outermost element have appropriate padding? (py-* for sections, px-* height class for navbar)
+
+AUTO-FLAG RULES:
 ${autoFlags.map((f, i) => `${i + 1}. ${f}`).join('\n')}
 
-ADDITIONAL CHECKS:
+ACCESSIBILITY:
 - aria-label on all icon-only buttons?
 - alt attribute on all img elements?
+
+CODE QUALITY:
 - @keyframes inside prefers-reduced-motion guard?
 - IIFE wrapper on all inline scripts?
-- CSS Custom Properties used correctly (var(--...) syntax)?
+- var(--color-*) used for colors — no hardcoded hex?
+- No :root {} block defined inside the section HTML?
 
-Respond with exactly this JSON structure:
+Respond with exactly this JSON:
 {
   "valid": boolean,
-  "score": number between 0 and 100,
+  "score": number,
   "errors": [
-    {
-      "type": "string identifier",
-      "message": "human readable description",
-      "severity": "error" or "warning",
-      "auto_fixable": boolean
-    }
+    { "type": "string", "message": "description", "severity": "error" | "warning", "auto_fixable": boolean }
   ]
 }`
 }

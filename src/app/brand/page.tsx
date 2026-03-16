@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useBuilderStore, BrandStyle } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowLeft, Zap, Type, Palette, LayoutTemplate, Sparkles, Check, Wand2, Loader2, RotateCcw, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Zap, Type, Palette, LayoutTemplate, Sparkles, Check, Wand2, Loader2, RotateCcw, ChevronDown, History, Paintbrush, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 
 const FONT_OPTIONS = [
@@ -228,199 +228,312 @@ function getToneStyle(tone: string, primary: string, secondary: string): ToneSty
   }
 }
 
-function BrandPreview({ brand }: { brand: BrandStyle }) {
-  const fontFamily = brand.fontFamily || 'Inter'
-  const primaryColor = brand.primaryColor || '#4F46E5'
-  const secondaryColor = brand.secondaryColor || '#818CF8'
-  const radius = brand.borderRadius || 'rounded-lg'
-  const tone = brand.tone || 'minimal and clean'
+function BrandPreview({ brand, companyName = 'Ihr Unternehmen' }: { brand: BrandStyle; companyName?: string }) {
+  const primary    = brand.primaryColor    || '#4F46E5'
+  const secondary  = brand.secondaryColor  || '#818CF8'
+  const accent     = brand.accentColor     || primary
+  const bg         = brand.backgroundColor || '#ffffff'
+  const surface    = brand.surfaceColor    || '#f9fafb'
+  const dark       = brand.darkColor       || '#111827'
+  const textCol    = brand.textColor       || '#111827'
+  const textMuted  = brand.textMutedColor  || '#6b7280'
+  const fontHead   = brand.fontFamily      || 'Inter'
+  const fontBody   = brand.fontBody        || fontHead
+  const headWeight = brand.headingWeight   || '700'
+  const radius     = brand.borderRadius    || 'rounded-lg'
 
-  const isSystemFont = SYSTEM_FONTS.has(fontFamily)
+  // Determine if dark section should use light text
+  const darkIsDark = dark.toLowerCase() < '#888888'
+  const darkText   = darkIsDark ? '#ffffff' : textCol
+  const darkMuted  = darkIsDark ? 'rgba(255,255,255,0.6)' : textMuted
+
+  const isSystemFont = SYSTEM_FONTS.has(fontHead)
   const googleFontUrl = isSystemFont
     ? ''
-    : `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;600;700;800;900&display=swap`
-
-  const ts = getToneStyle(tone, primaryColor, secondaryColor)
-  const isDark = ts.heroBg === '#0f0f0f' || ts.heroBg === '#111' || ts.heroBg === '#060d1f'
-  const cardTextColor = isDark || ts.cardBg.startsWith('#0') || ts.cardBg.startsWith('#1') ? '#e5e7eb' : '#111827'
-  const cardSubColor = isDark || ts.cardBg.startsWith('#0') || ts.cardBg.startsWith('#1') ? '#9ca3af' : '#6b7280'
+    : `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontHead)}:wght@400;600;700;800;900&display=swap`
 
   return (
-    <div className="w-full h-full overflow-y-auto rounded-2xl border border-gray-200 shadow-inner" style={{ backgroundColor: ts.navBg }}>
-      {googleFontUrl && <style>{`@import url('${googleFontUrl}'); .brand-preview * { font-family: '${fontFamily}', sans-serif !important; }`}</style>}
-      {!googleFontUrl && <style>{`.brand-preview * { font-family: '${fontFamily}', sans-serif !important; }`}</style>}
-      <div className="brand-preview">
+    <div className="w-full h-full overflow-y-auto rounded-2xl border border-gray-200 shadow-inner" style={{ backgroundColor: bg }}>
+      {googleFontUrl && (
+        <style>{`@import url('${googleFontUrl}'); .bp-head { font-family: '${fontHead}', sans-serif !important; } .bp-body { font-family: '${fontBody}', sans-serif !important; }`}</style>
+      )}
 
-        {/* Navbar */}
-        <div
-          className="flex items-center justify-between px-8 py-4"
-          style={{ backgroundColor: ts.navBg, borderBottom: `1px solid ${ts.navBorder}` }}
-        >
+      {/* Token badge helper */}
+      {(() => {
+        const Badge = ({ token, hex }: { token: string; hex: string }) => (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border" style={{ backgroundColor: `${hex}18`, borderColor: `${hex}40`, color: hex }}>
+            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: hex }} />
+            {token}
+          </span>
+        )
+        return null
+      })()}
+
+      {/* ── Navbar ── background token */}
+      <div className="relative">
+        <div className="absolute top-1 right-2 flex gap-1 z-10 opacity-80">
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border" style={{ backgroundColor: `${bg}cc`, borderColor: `${primary}40`, color: primary }}>
+            <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: bg, border: '1px solid #ccc' }} />background
+          </span>
+        </div>
+        <div className="flex items-center justify-between px-8 py-4 border-b" style={{ backgroundColor: bg, borderColor: surface }}>
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 flex items-center justify-center ${radius}`} style={{ backgroundColor: primaryColor }}>
+            <div className={`w-8 h-8 flex items-center justify-center ${radius}`} style={{ backgroundColor: primary }}>
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-lg" style={{ color: ts.heroText, fontWeight: ts.headingWeight }}>{brand.fontFamily || 'YourBrand'}</span>
+            <span className="bp-head font-bold text-base" style={{ color: textCol, fontWeight: headWeight }}>{companyName}</span>
           </div>
-          <div className="flex items-center gap-6 text-sm font-medium" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
-            <span>Features</span><span>Pricing</span><span>About</span>
+          <div className="flex items-center gap-6 text-sm bp-body" style={{ color: textMuted }}>
+            <span>Leistungen</span><span>Ablauf</span><span>Kontakt</span>
           </div>
-          <button
-            className={`px-4 py-2 text-sm font-semibold ${radius}`}
-            style={{ backgroundColor: ts.ctaBg, color: ts.ctaText }}
-          >
-            Get Started
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${accent}20`, color: accent }}>accent →</span>
+            <button className={`px-4 py-2 text-sm font-semibold bp-head ${radius}`} style={{ backgroundColor: accent, color: '#fff' }}>
+              Beratung anfragen
+            </button>
+          </div>
         </div>
+      </div>
 
-        {/* Hero */}
-        <div
-          className="px-8 py-16 text-center"
-          style={{ background: ts.heroBg }}
-        >
+      {/* ── Hero ── dark token as background */}
+      <div className="relative">
+        <div className="absolute top-2 right-2 flex gap-1 z-10">
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${accent}30`, color: '#fff' }}>dark → background</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${accent}50`, color: '#fff' }}>highlight → badge</span>
+        </div>
+        <div className="px-8 py-16 text-center" style={{ backgroundColor: dark }}>
           <div
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-5"
-            style={{ backgroundColor: `${ts.badge}20`, color: ts.badge }}
+            style={{ backgroundColor: `${accent}25`, color: accent }}
           >
-            <Sparkles className="w-3 h-3" /> {ts.tagline}
+            <Sparkles className="w-3 h-3" /> Vertrauenswürdig · Regional · Transparent
           </div>
-          <h1
-            className="text-4xl mb-4 leading-tight"
-            style={{ color: ts.heroText, fontWeight: ts.headingWeight, letterSpacing: ts.bodySpacing }}
-          >
-            Build Something<br />
-            <span style={{ color: ts.badge }}>Extraordinary</span>
+          <h1 className="bp-head text-4xl mb-4 leading-tight" style={{ color: darkText, fontWeight: headWeight }}>
+            Ihr Bauprojekt,{' '}
+            <span style={{ color: accent }}>persönlich begleitet</span>
           </h1>
-          <p className="text-lg max-w-md mx-auto mb-8" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
-            Your brand voice in every pixel. Consistent, beautiful, and unmistakably yours.
+          <p className="bp-body text-lg max-w-md mx-auto mb-8" style={{ color: darkMuted }}>
+            Mit einem festen Ansprechpartner, klaren Abläufen und voller Kostentransparenz.
           </p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <button
-              className={`px-6 py-3 text-sm font-bold ${radius}`}
-              style={{ backgroundColor: ts.ctaBg, color: ts.ctaText, boxShadow: ts.cardShadow }}
-            >
-              Start Free Trial
-            </button>
-            <button
-              className={`px-6 py-3 text-sm font-semibold border-2 ${radius}`}
-              style={{ borderColor: ts.badge, color: ts.badge, backgroundColor: 'transparent' }}
-            >
-              View Demo
-            </button>
+          <div className="flex items-center justify-center gap-3">
+            <div>
+              <span className="block text-[10px] mb-1" style={{ color: `${accent}cc` }}>← accent</span>
+              <button className={`bp-head px-6 py-3 text-sm font-bold ${radius}`} style={{ backgroundColor: accent, color: '#fff' }}>
+                Beratungsgespräch vereinbaren
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Feature cards */}
-        <div className="px-8 py-10 grid grid-cols-3 gap-4" style={{ backgroundColor: ts.cardBg }}>
-          {['Fast & Reliable', 'Beautiful Design', 'Easy to Use'].map((f, i) => (
+      {/* ── Services ── surface + background + primary/secondary/accent */}
+      <div className="relative">
+        <div className="absolute top-2 right-2 flex gap-1 z-10">
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border" style={{ backgroundColor: `${surface}`, borderColor: `${primary}30`, color: primary }}>surface → section bg</span>
+        </div>
+        <div className="px-8 py-10 grid grid-cols-3 gap-4" style={{ backgroundColor: surface }}>
+          {[
+            { label: 'Projektsteuerung', token: 'primary', color: primary },
+            { label: 'Persönliche Betreuung', token: 'secondary', color: secondary },
+            { label: 'Bauqualität & Finanzierung', token: 'accent', color: accent },
+          ].map(({ label, token, color }, i) => (
             <div
               key={i}
-              className={`p-5 ${radius}`}
-              style={{ backgroundColor: ts.navBg, boxShadow: ts.cardShadow, border: `1px solid ${ts.navBorder}` }}
+              className={`p-5 ${radius} relative`}
+              style={{ backgroundColor: bg, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: `1px solid ${surface}` }}
             >
+              <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${color}15`, color }}>
+                {token}
+              </span>
               <div
                 className={`w-10 h-10 flex items-center justify-center mb-3 ${radius}`}
-                style={{ backgroundColor: `${i === 0 ? primaryColor : secondaryColor}25` }}
+                style={{ backgroundColor: `${color}20` }}
               >
-                <Check className="w-5 h-5" style={{ color: i === 0 ? primaryColor : secondaryColor }} />
+                <Check className="w-5 h-5" style={{ color }} />
               </div>
-              <p className="font-semibold text-sm" style={{ color: cardTextColor, fontWeight: ts.headingWeight }}>{f}</p>
-              <p className="text-xs mt-1" style={{ color: cardSubColor }}>Consistent design across every touchpoint.</p>
+              <p className="bp-head font-semibold text-sm" style={{ color: textCol, fontWeight: headWeight }}>{label}</p>
+              <p className="bp-body text-xs mt-1" style={{ color: textMuted }}>Klare Abläufe & volle Kostenkontrolle.</p>
             </div>
           ))}
         </div>
-
-        {/* CTA banner */}
-        <div
-          className="px-8 py-10 text-center"
-          style={{ backgroundColor: ts.ctaBg === primaryColor ? primaryColor : ts.ctaBg }}
-        >
-          <h2 className="text-2xl font-bold mb-2" style={{ color: ts.ctaText, fontWeight: ts.headingWeight }}>Ready to get started?</h2>
-          <p className="text-sm opacity-80 mb-5" style={{ color: ts.ctaText }}>Join thousands of teams building with your brand.</p>
-          <button
-            className={`px-6 py-3 text-sm font-bold ${radius}`}
-            style={{ backgroundColor: isDark ? '#ffffff' : '#ffffff', color: primaryColor }}
-          >
-            Get Started Today
-          </button>
-        </div>
-
-        {/* Typography scale */}
-        <div className="px-8 py-8" style={{ backgroundColor: ts.navBg, borderTop: `1px solid ${ts.navBorder}` }}>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
-            Typography — {fontFamily}
-          </p>
-          <div className="space-y-2">
-            <p style={{ fontSize: 32, fontWeight: ts.headingWeight, color: ts.heroText, letterSpacing: ts.bodySpacing }}>Display Heading</p>
-            <p style={{ fontSize: 22, fontWeight: '700', color: ts.heroText }}>Section Heading</p>
-            <p style={{ fontSize: 16, fontWeight: '600', color: isDark ? '#d1d5db' : '#374151' }}>Card Title</p>
-            <p style={{ fontSize: 14, color: isDark ? '#9ca3af' : '#6b7280' }}>Body text — readable and clear for paragraphs and descriptions.</p>
-            <p style={{ fontSize: 12, color: isDark ? '#6b7280' : '#9ca3af' }}>Caption — metadata, labels, secondary info.</p>
-          </div>
-          <div className="flex items-center gap-3 mt-5 flex-wrap">
-            <span className="text-xs font-semibold" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>Color palette:</span>
-            <div className="w-8 h-8 rounded-full border-2 border-white shadow" style={{ backgroundColor: primaryColor }} title="Primary" />
-            <div className="w-8 h-8 rounded-full border-2 border-white shadow" style={{ backgroundColor: secondaryColor }} title="Secondary" />
-            <div className="w-8 h-8 rounded-full border-2 border-white shadow" style={{ backgroundColor: ts.badge }} title="Accent" />
-            <div className="w-8 h-8 rounded-full border-2 border-white shadow" style={{ backgroundColor: ts.heroText }} title="Text" />
-          </div>
-        </div>
-
       </div>
+
+      {/* ── CTA ── primary as section background */}
+      <div className="relative">
+        <div className="absolute top-2 right-2 z-10">
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>primary → CTA background</span>
+        </div>
+        <div className="px-8 py-10 text-center" style={{ backgroundColor: primary }}>
+          <h2 className="bp-head text-2xl font-bold mb-2" style={{ color: '#fff', fontWeight: headWeight }}>Jetzt Beratung anfragen</h2>
+          <p className="bp-body text-sm opacity-80 mb-5" style={{ color: '#fff' }}>Kostenloses Erstgespräch — unverbindlich & persönlich.</p>
+          <div className="flex items-center justify-center gap-3">
+            <div>
+              <span className="block text-[10px] mb-1 opacity-70" style={{ color: '#fff' }}>← accent button on primary bg</span>
+              <button className={`bp-head px-6 py-3 text-sm font-bold ${radius}`} style={{ backgroundColor: accent, color: '#fff' }}>
+                Beratungsgespräch vereinbaren
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Typography + full token palette ── */}
+      <div className="px-8 py-6" style={{ backgroundColor: bg, borderTop: `1px solid ${surface}` }}>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: textMuted }}>
+          Typography tokens
+        </p>
+        <div className="space-y-1.5 mb-5">
+          <div className="flex items-baseline gap-2">
+            <p className="bp-head" style={{ fontSize: 28, fontWeight: headWeight, color: textCol }}>Überschrift H1</p>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${primary}15`, color: primary }}>font_heading · weight {headWeight}</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <p className="bp-head" style={{ fontSize: 20, fontWeight: '700', color: textCol }}>Abschnittsüberschrift H2</p>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <p className="bp-body" style={{ fontSize: 14, color: textMuted }}>Fließtext — font_body · text_muted color</p>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${accent}15`, color: accent }}>text_muted</span>
+          </div>
+        </div>
+
+        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: textMuted }}>All color tokens</p>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { c: primary,   label: 'primary',     desc: 'CTA bg, icons, links' },
+            { c: secondary, label: 'secondary',   desc: 'Feature icons, badges' },
+            { c: accent,    label: 'accent',       desc: 'Buttons, highlights' },
+            { c: brand.highlightColor || accent, label: 'highlight', desc: 'Emphasized text' },
+            { c: dark,      label: 'dark',         desc: 'Hero / dark sections' },
+            { c: surface,   label: 'surface',      desc: 'Section alternates' },
+            { c: bg,        label: 'background',   desc: 'Page background' },
+            { c: textCol,   label: 'text',         desc: 'Body text' },
+            { c: textMuted, label: 'text_muted',   desc: 'Subtitles, captions' },
+          ].map(({ c, label, desc }) => (
+            <div key={label} className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: surface }}>
+              <div className="w-8 h-8 rounded-lg flex-shrink-0 border" style={{ backgroundColor: c, borderColor: `${textMuted}30` }} />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold truncate" style={{ color: textCol }}>{label}</p>
+                <p className="text-[10px] truncate" style={{ color: textMuted }}>{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   )
 }
 
 function buildBrandInstruction(brand: BrandStyle): string {
   const parts: string[] = []
-  if (brand.primaryColor) parts.push(`primary color: ${brand.primaryColor}`)
-  if (brand.secondaryColor) parts.push(`secondary/accent color: ${brand.secondaryColor}`)
-  if (brand.fontFamily) parts.push(`font family: ${brand.fontFamily}`)
-  if (brand.borderRadius) parts.push(`button and card shape: ${brand.borderRadius}`)
+  if (brand.primaryColor)    parts.push(`primary color: ${brand.primaryColor}`)
+  if (brand.secondaryColor)  parts.push(`secondary color: ${brand.secondaryColor}`)
+  if (brand.accentColor)     parts.push(`accent color: ${brand.accentColor}`)
+  if (brand.highlightColor)  parts.push(`highlight color: ${brand.highlightColor}`)
+  if (brand.backgroundColor) parts.push(`background color: ${brand.backgroundColor}`)
+  if (brand.surfaceColor)    parts.push(`surface/card background color: ${brand.surfaceColor}`)
+  if (brand.darkColor)       parts.push(`dark section background color: ${brand.darkColor}`)
+  if (brand.textColor)       parts.push(`body text color: ${brand.textColor}`)
+  if (brand.textMutedColor)  parts.push(`muted/secondary text color: ${brand.textMutedColor}`)
+  if (brand.fontFamily)      parts.push(`heading font family: ${brand.fontFamily}`)
+  if (brand.fontBody)        parts.push(`body font family: ${brand.fontBody}`)
+  if (brand.headingWeight)   parts.push(`heading font weight: ${brand.headingWeight}`)
+  if (brand.borderRadius)    parts.push(`button and card shape: ${brand.borderRadius}`)
   if (brand.tone) parts.push(`visual tone: ${brand.tone}`)
   if (brand.extraNotes) parts.push(brand.extraNotes)
   return `Apply this brand style consistently across the section: ${parts.join(', ')}`
 }
 
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
 export default function BrandPage() {
-  const { project, setBrand, snapshotAllSections, revertAllSections, updateSectionHtmlAcrossPages, htmlSnapshots } = useBuilderStore()
+  const {
+    project, setBrand,
+    snapshotAllSections, revertAllSections,
+    pushHistory, revertToHistory, clearHistory,
+    syncColorsAcrossPages, injectCssTokens,
+    updateSectionHtmlAcrossPages,
+    history,
+  } = useBuilderStore()
   const brand = project.brand
 
   const [applying, setApplying] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [hasApplied, setHasApplied] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const prevBrandRef = useRef<BrandStyle>(brand)
 
   function update(key: keyof BrandStyle, value: string) {
     setBrand({ [key]: value })
   }
 
   const totalSections = project.pages.reduce((sum, p) => sum + p.sections.length, 0)
-  const completedFields = Object.values(brand).filter((v) => v.trim() !== '').length
-  const totalFields = Object.keys(brand).length
+  const keyColorFields: (keyof BrandStyle)[] = ['primaryColor', 'secondaryColor', 'accentColor', 'fontFamily']
+  const completedFields = keyColorFields.filter((k) => brand[k]?.trim() !== '').length
+  const totalFields = keyColorFields.length
 
+  // ── Sync Colors (instant, no AI) ──────────────────────────────────────────
+  function handleSyncColors() {
+    const prev = prevBrandRef.current
+    const colorKeys: (keyof BrandStyle)[] = [
+      'primaryColor', 'secondaryColor', 'accentColor', 'highlightColor',
+      'backgroundColor', 'surfaceColor', 'darkColor', 'textColor', 'textMutedColor',
+    ]
+    const oldColors: Record<string, string> = {}
+    const newColors: Record<string, string> = {}
+    colorKeys.forEach((k) => {
+      if (prev[k] && brand[k] && prev[k] !== brand[k]) {
+        oldColors[k] = prev[k]
+        newColors[k] = brand[k]
+      }
+    })
+    const changedCount = Object.keys(oldColors).length
+    if (changedCount === 0) {
+      toast('No color changes detected since last sync')
+      return
+    }
+    setSyncing(true)
+    pushHistory(`Before color sync (${changedCount} token${changedCount > 1 ? 's' : ''})`)
+    syncColorsAcrossPages(oldColors, newColors)
+    prevBrandRef.current = { ...brand }
+    setSyncing(false)
+    toast.success(`Synced ${changedCount} color token${changedCount > 1 ? 's' : ''} across all sections`)
+  }
+
+  // ── Apply Brand via AI (constrained) ─────────────────────────────────────
   const handleApplyBrand = useCallback(async () => {
     const instruction = buildBrandInstruction(brand)
     if (!instruction.trim() || totalSections === 0) {
       toast.error('No brand settings or sections to apply to')
       return
     }
-    // Snapshot everything first for undo
+    pushHistory('Before AI brand apply')
     snapshotAllSections()
     setApplying(true)
     setHasApplied(false)
     const allTasks: Array<{ pageId: string; sectionId: string; html: string }> = []
     project.pages.forEach((p) => p.sections.forEach((sec) => allTasks.push({ pageId: p.id, sectionId: sec.id, html: sec.html })))
     setProgress({ done: 0, total: allTasks.length })
-    toast.info(`Applying brand to ${allTasks.length} sections across ${project.pages.length} pages…`)
+    toast.info(`Applying brand to ${allTasks.length} sections…`)
 
     let successCount = 0
     await Promise.all(
       allTasks.map(async ({ pageId, sectionId, html }) => {
         try {
+          const constrainedInstruction = `${instruction}. IMPORTANT: Change ONLY the specified colors and fonts. Do NOT alter layout, spacing, content, section structure, animations, or any other property. Return the section HTML with ONLY these token substitutions applied.`
           const res = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ styleEdit: true, currentHtml: html, styleInstruction: instruction, sectionType: 'custom' }),
+            body: JSON.stringify({ styleEdit: true, currentHtml: html, styleInstruction: constrainedInstruction, sectionType: 'custom' }),
           })
           if (!res.ok) return
           const data = await res.json()
@@ -428,15 +541,16 @@ export default function BrandPage() {
             updateSectionHtmlAcrossPages(pageId, sectionId, data.html)
             successCount++
           }
-        } catch { /* skip failed sections */ } finally {
+        } catch { /* skip */ } finally {
           setProgress((p) => ({ ...p, done: p.done + 1 }))
         }
       })
     )
     setApplying(false)
     setHasApplied(true)
+    prevBrandRef.current = { ...brand }
     toast.success(`Brand applied to ${successCount} sections!`)
-  }, [brand, project, snapshotAllSections, updateSectionHtmlAcrossPages, totalSections])
+  }, [brand, project, snapshotAllSections, pushHistory, updateSectionHtmlAcrossPages, totalSections])
 
   function handleRevert() {
     revertAllSections()
@@ -490,7 +604,46 @@ export default function BrandPage() {
             </div>
           )}
 
-          {/* Undo button */}
+          {/* History toggle */}
+          <Button
+            onClick={() => setShowHistory((v) => !v)}
+            variant="outline"
+            size="sm"
+            className={`text-xs gap-1.5 ${history.length > 0 ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : ''}`}
+          >
+            <History className="w-3.5 h-3.5" />
+            History {history.length > 0 && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 rounded-full">{history.length}</span>}
+          </Button>
+
+          {/* Inject CSS Tokens button — fixes existing sections with no :root vars */}
+          {totalSections > 0 && (
+            <Button
+              onClick={() => {
+                pushHistory('Before clean legacy tokens')
+                injectCssTokens()
+                toast.success('Legacy token blocks cleaned from sections')
+              }}
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5 border-teal-300 text-teal-600 hover:bg-teal-50"
+            >
+              <Zap className="w-3.5 h-3.5" /> Clean Tokens
+            </Button>
+          )}
+
+          {/* Sync Colors button */}
+          <Button
+            onClick={handleSyncColors}
+            disabled={syncing || totalSections === 0}
+            variant="outline"
+            size="sm"
+            className="text-xs gap-1.5 border-emerald-300 text-emerald-600 hover:bg-emerald-50"
+          >
+            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paintbrush className="w-3.5 h-3.5" />}
+            Sync Colors
+          </Button>
+
+          {/* Undo last apply */}
           {hasApplied && !applying && (
             <Button
               onClick={handleRevert}
@@ -502,7 +655,7 @@ export default function BrandPage() {
             </Button>
           )}
 
-          {/* Apply brand button */}
+          {/* Apply brand via AI (constrained) */}
           <Button
             onClick={handleApplyBrand}
             disabled={applying || totalSections === 0 || completedFields === 0}
@@ -511,13 +664,13 @@ export default function BrandPage() {
             {applying ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Applying…</>
             ) : (
-              <><Wand2 className="w-4 h-4" /> Apply Brand to All Pages</>
+              <><Wand2 className="w-4 h-4" /> Apply Brand (AI)</>
             )}
           </Button>
         </div>
       </header>
 
-      {/* Main layout: editor left, preview right */}
+      {/* Main layout: editor left, (history panel), preview right */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* Left: Editor panel */}
@@ -547,49 +700,44 @@ export default function BrandPage() {
               ))}
             </div>
 
-            {/* Custom colors */}
+            {/* Custom colors — all manifest fields */}
             <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1.5">Primary Color</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={brand.primaryColor || '#4F46E5'}
-                    onChange={(e) => update('primaryColor', e.target.value)}
-                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
-                  />
-                  <input
-                    type="text"
-                    value={brand.primaryColor}
-                    onChange={(e) => update('primaryColor', e.target.value)}
-                    placeholder="#4F46E5 or indigo"
-                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300 font-mono"
-                  />
+              {([
+                { key: 'primaryColor',    label: 'Primary',    fallback: '#4F46E5' },
+                { key: 'secondaryColor',  label: 'Secondary',  fallback: '#818CF8' },
+                { key: 'accentColor',     label: 'Accent',     fallback: '#F59E0B' },
+                { key: 'highlightColor',  label: 'Highlight',  fallback: '#E0E7FF' },
+                { key: 'backgroundColor', label: 'Background', fallback: '#FFFFFF' },
+                { key: 'surfaceColor',    label: 'Surface',    fallback: '#F9FAFB' },
+                { key: 'darkColor',       label: 'Dark',       fallback: '#111827' },
+                { key: 'textColor',       label: 'Text',       fallback: '#1F2937' },
+                { key: 'textMutedColor',  label: 'Text Muted', fallback: '#6B7280' },
+              ] as { key: keyof BrandStyle; label: string; fallback: string }[]).map(({ key, label, fallback }) => (
+                <div key={key}>
+                  <label className="text-xs font-semibold text-gray-500 block mb-1.5">{label}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={brand[key] || fallback}
+                      onChange={(e) => update(key, e.target.value)}
+                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={brand[key]}
+                      onChange={(e) => update(key, e.target.value)}
+                      placeholder={fallback}
+                      className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300 font-mono"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1.5">Secondary / Accent Color</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={brand.secondaryColor || '#818CF8'}
-                    onChange={(e) => update('secondaryColor', e.target.value)}
-                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
-                  />
-                  <input
-                    type="text"
-                    value={brand.secondaryColor}
-                    onChange={(e) => update('secondaryColor', e.target.value)}
-                    placeholder="#818CF8 or light-indigo"
-                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300 font-mono"
-                  />
-                </div>
-              </div>
+              ))}
             </div>
           </CollapsibleSection>
 
           {/* Typography section */}
           <CollapsibleSection icon={<Type className="w-4 h-4 text-indigo-500" />} title="Typography" color="#6366f1" badge={brand.fontFamily || undefined}>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Heading Font</p>
             {(['Sans-serif', 'Serif', 'System', 'Mono'] as const).map((cat) => {
               const fonts = FONT_OPTIONS.filter((f) => f.category === cat)
               return (
@@ -614,8 +762,8 @@ export default function BrandPage() {
                 </div>
               )
             })}
-            <div className="mt-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Custom font</label>
+            <div className="mt-1 mb-4">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Custom heading font</label>
               <input
                 type="text"
                 value={brand.fontFamily}
@@ -623,6 +771,37 @@ export default function BrandPage() {
                 placeholder="e.g. Cabin, Josefin Sans…"
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
+            </div>
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Body Font</label>
+                <input
+                  type="text"
+                  value={brand.fontBody}
+                  onChange={(e) => update('fontBody', e.target.value)}
+                  placeholder="e.g. Inter, Open Sans…"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Heading Weight</label>
+                <div className="flex gap-2">
+                  {['600', '700', '800', '900'].map((w) => (
+                    <button
+                      key={w}
+                      onClick={() => update('headingWeight', w)}
+                      className={`flex-1 py-2 rounded-lg border-2 text-xs font-bold transition-all ${
+                        brand.headingWeight === w
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-100 text-gray-500 hover:border-indigo-200'
+                      }`}
+                      style={{ fontWeight: Number(w) }}
+                    >
+                      {w}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </CollapsibleSection>
 
@@ -680,6 +859,67 @@ export default function BrandPage() {
           </CollapsibleSection>
         </div>
 
+        {/* History panel */}
+        {showHistory && (
+          <div className="w-72 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-bold text-gray-900">History</span>
+                <span className="text-xs text-gray-400">({history.length}/20)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {history.length > 0 && (
+                  <button
+                    onClick={() => { clearHistory(); toast('History cleared') }}
+                    className="text-[11px] text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+                <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-700">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {history.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <History className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                  <p className="text-xs text-gray-400">No history yet.</p>
+                  <p className="text-xs text-gray-300 mt-1">Snapshots are saved automatically before every Sync or AI Apply.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {history.map((entry, i) => (
+                    <div key={entry.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-700 truncate">{entry.label}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(entry.timestamp)}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            pushHistory(`Before revert to "${entry.label}"`)
+                            revertToHistory(entry.id)
+                            toast.success(`Reverted to: ${entry.label}`)
+                          }}
+                          className="flex-shrink-0 text-[11px] font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg transition-colors"
+                        >
+                          Restore
+                        </button>
+                      </div>
+                      {i === 0 && (
+                        <span className="inline-block mt-1 text-[10px] bg-emerald-100 text-emerald-700 font-semibold px-1.5 py-0.5 rounded-full">latest</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Right: Live preview */}
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="px-6 py-3 border-b border-gray-200 bg-white flex items-center gap-2">
@@ -687,7 +927,7 @@ export default function BrandPage() {
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Live Preview — updates as you edit</span>
           </div>
           <div className="flex-1 overflow-hidden p-6">
-            <BrandPreview brand={brand} />
+            <BrandPreview brand={brand} companyName={project.manifest?.content?.company_name || project.name} />
           </div>
         </div>
 

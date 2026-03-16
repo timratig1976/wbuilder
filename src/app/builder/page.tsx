@@ -5,8 +5,9 @@ import { Sidebar } from '@/components/builder/Sidebar'
 import { Canvas } from '@/components/builder/Canvas'
 import { PropertiesPanel } from '@/components/builder/PropertiesPanel'
 import { useBuilderStore, SectionType } from '@/lib/store'
-import { useLogStore, AILogEntry } from '@/lib/logStore'
+import { useLogStore } from '@/lib/logStore'
 import { AICallLog, PageContext, ExistingSection } from '@/lib/ai'
+import { AILogPanel } from '@/components/builder/AILogPanel'
 import { toast } from 'sonner'
 
 function makeRunId(): string {
@@ -71,18 +72,11 @@ export default function BuilderPage() {
     setPagePrompt,
   } = useBuilderStore()
 
-  const { addLog } = useLogStore()
+  const { logs, stepPauseMode, registerBreakpoint, abortBreakpoint } = useLogStore()
 
   function writeLog(log: AICallLog | null, pageTitle: string, pagePrompt: string, customPrompt?: string) {
-    if (!log) return
-    const entry: Omit<AILogEntry, 'id'> = {
-      ...log,
-      timestamp: Date.now(),
-      pageTitle,
-      pagePrompt,
-      customPrompt,
-    }
-    addLog(entry)
+    // Logging is now handled automatically by OpenAIProvider — no-op kept for legacy v1 stream path
+    void log; void pageTitle; void pagePrompt; void customPrompt
   }
 
   /**
@@ -206,7 +200,7 @@ export default function BuilderPage() {
 
       const sectionIds: string[] = []
       for (const sectionType of sectionTypes) {
-        addSection('custom', `<!-- generating ${sectionType}… -->`, '')
+        addSection(sectionType as SectionType, `<!-- generating ${sectionType}… -->`, '')
         const sections = useBuilderStore.getState().page.sections
         const newId = sections[sections.length - 1].id
         sectionIds.push(newId)
@@ -227,20 +221,52 @@ export default function BuilderPage() {
             const reader = res.body.getReader()
             const decoder = new TextDecoder()
             let buffer = ''
+            let pendingBreakpoint: Promise<void> | null = null
+            let breakpointPass: 'pass1_structure' | 'pass2_visual' | null = null
 
-            while (true) {
+            outer: while (true) {
+              // If we have a pending breakpoint from the previous chunk, await it here
+              // OUTSIDE the line-parsing loop so we can properly break the outer while.
+              if (pendingBreakpoint) {
+                try {
+                  await pendingBreakpoint
+                } catch {
+                  // User clicked Abort
+                  reader.cancel()
+                  break outer
+                }
+                pendingBreakpoint = null
+                breakpointPass = null
+              }
+
               const { done, value } = await reader.read()
               if (done) break
               buffer += decoder.decode(value, { stream: true })
               const lines = buffer.split('\n')
               buffer = lines.pop() ?? ''
+
               for (const line of lines) {
                 if (!line.startsWith('data: ')) continue
                 try {
                   const event = JSON.parse(line.slice(6))
-                  if (event.type === 'pass1' && event.html) updateSectionHtml(id, event.html)
-                  if (event.type === 'pass2' && event.html) updateSectionHtml(id, event.html)
+                  if (event.type === 'pass1' && event.html) {
+                    updateSectionHtml(id, event.html)
+                    if (stepPauseMode && breakpointPass !== 'pass1_structure') {
+                      const { promise } = registerBreakpoint({ sectionType, sectionId: id, afterPass: 'pass1_structure' })
+                      pendingBreakpoint = promise
+                      breakpointPass = 'pass1_structure'
+                    }
+                  }
+                  if (event.type === 'pass2' && event.html) {
+                    updateSectionHtml(id, event.html)
+                    if (stepPauseMode && breakpointPass !== 'pass2_visual') {
+                      const { promise } = registerBreakpoint({ sectionType, sectionId: id, afterPass: 'pass2_visual' })
+                      pendingBreakpoint = promise
+                      breakpointPass = 'pass2_visual'
+                    }
+                  }
                   if (event.type === 'complete' && event.html) updateSectionHtml(id, event.html)
+                  if (event.type === 'log' && event.entry) useLogStore.getState().upsertLog(event.entry)
                 } catch { /* ignore parse errors */ }
               }
             }
@@ -380,6 +406,7 @@ export default function BuilderPage() {
         <Sidebar onGenerate={handleGenerate} onAddSection={handleAddSection} />
         <Canvas />
         <PropertiesPanel onRegenerate={handleRegenerate} />
+        <AILogPanel />
       </div>
     </div>
   )

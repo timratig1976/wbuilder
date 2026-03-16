@@ -580,14 +580,14 @@ const MODEL_PRICING: Record<string, { in: number; out: number }> = {
 }
 const USD_TO_EUR = 0.92
 
-function calcRunCost(logs: import('@/lib/logStore').AILogEntry[]): number | null {
+function calcRunCost(logs: import('@/lib/logStore').AICallLog[]): number | null {
   if (logs.length === 0) return null
-  // Find the most recent classify entry — that's the start of the last run
+  // Find the most recent pass1 entry — that's the start of the last generation run
   const sorted = [...logs].sort((a, b) => b.timestamp - a.timestamp)
-  const lastClassify = sorted.find(l => l.step === 'classify')
-  if (!lastClassify) return null
-  // All logs at or after the classify timestamp belong to this run
-  const runStart = lastClassify.timestamp
+  const lastPass1 = sorted.find(l => l.pass === 'pass1_structure' || l.pass === 'manifest')
+  if (!lastPass1) return null
+  // All logs at or after that timestamp belong to this run
+  const runStart = lastPass1.timestamp
   const runLogs = sorted.filter(l => l.timestamp >= runStart)
 
   let totalUsd = 0

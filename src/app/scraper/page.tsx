@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { PageTopbar } from '@/components/ui/PageTopbar'
 import {
   Database, Zap, RefreshCw, Trash2, Code2, Eye, EyeOff,
   ArrowLeft, FileJson, Download, Upload, CheckCircle2,
@@ -380,20 +381,9 @@ export default function ScraperPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Back
-            </Link>
-            <Separator orientation="vertical" className="h-5" />
-            <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-indigo-600" />
-              <span className="font-bold text-gray-900">Block Library</span>
-              <Badge variant="secondary" className="text-xs">Scraper Dashboard</Badge>
-            </div>
-          </div>
+      <PageTopbar
+        title="Block Library"
+        right={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={fetchData} className="text-xs gap-1.5">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
@@ -407,8 +397,8 @@ export default function ScraperPage() {
               </Button>
             </Link>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
 

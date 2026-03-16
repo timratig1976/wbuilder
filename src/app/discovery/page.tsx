@@ -14,6 +14,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { PageTopbar } from '@/components/ui/PageTopbar'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -176,16 +178,9 @@ export default function DiscoveryPage() {
   )
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-gray-50">
+      <PageTopbar title="Design Discovery" />
       <div className="max-w-6xl mx-auto px-5 py-8">
-
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-zinc-900 mb-1">Design Discovery</h1>
-          <p className="text-sm text-zinc-500">
-            Neue Design-Patterns aus gescrapten Sites — review, approve, formalisieren.
-          </p>
-        </div>
 
         <div className="flex gap-6 items-start">
 

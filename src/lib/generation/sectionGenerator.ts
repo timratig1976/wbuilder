@@ -33,33 +33,43 @@ export async function generateSection(
 
   // ── Pass 1: Structure ─────────────────────────────────
   onProgress?.({ pass: 1 })
-  const pass1Html = await provider.complete({
-    ...MODEL_CONFIG.pass1_structure,
-    system: buildPass1System(dict, manifest),
-    messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml) }],
-  })
+  const pass1Html = await provider.complete(
+    {
+      ...MODEL_CONFIG.pass1_structure,
+      system: buildPass1System(dict, manifest),
+      messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml) }],
+    },
+    { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
+  )
   onProgress?.({ pass: 1, html: pass1Html })
 
-  // ── Pass 2: Visual layer (skip if animation budget = none) ──
+  // ── Pass 2: Visual layer (skip if budget=none AND no placeholders) ──
+  const hasPlaceholders = pass1Html.includes('<!-- [ANIM:') || pass1Html.includes('<!-- [BG:')
   let pass2Html: string | null = null
-  if (dict.rules.animation.budget !== 'none') {
+  if (dict.rules.animation.budget !== 'none' || hasPlaceholders) {
     onProgress?.({ pass: 2 })
-    pass2Html = await provider.complete({
-      ...MODEL_CONFIG.pass2_visual,
-      system: buildPass2System(dict),
-      messages: [{ role: 'user', content: buildPass2User(pass1Html) }],
-    })
+    pass2Html = await provider.complete(
+      {
+        ...MODEL_CONFIG.pass2_visual,
+        system: buildPass2System(dict),
+        messages: [{ role: 'user', content: buildPass2User(pass1Html) }],
+      },
+      { pass: 'pass2_visual', label: `Pass 2 — ${sectionType} visual layer` }
+    )
     onProgress?.({ pass: 2, html: pass2Html })
   }
 
   // ── Pass 3: Validation ────────────────────────────────
   onProgress?.({ pass: 3 })
   const htmlToValidate = pass2Html ?? pass1Html
-  const validationRaw = await provider.complete({
-    ...MODEL_CONFIG.pass3_validator,
-    system: PASS3_SYSTEM,
-    messages: [{ role: 'user', content: buildPass3User(htmlToValidate, manifest.pass3_auto_flags) }],
-  })
+  const validationRaw = await provider.complete(
+    {
+      ...MODEL_CONFIG.pass3_validator,
+      system: PASS3_SYSTEM,
+      messages: [{ role: 'user', content: buildPass3User(htmlToValidate, manifest.pass3_auto_flags) }],
+    },
+    { pass: 'pass3_validator', label: `Pass 3 — ${sectionType} validation` }
+  )
 
   const validation = safeParseJson<ValidationResult>(validationRaw)
 
@@ -96,6 +106,9 @@ export async function generateSectionStreamed(
 
   const send = (event: object) => writer.write(`data: ${JSON.stringify(event)}\n\n`)
 
+  // Forward log entries from the provider through SSE so the client can display them
+  provider.onLog = (entry) => send({ type: 'log', entry })
+
   try {
     // Pass 1
     send({ type: 'status', pass: 1, section: sectionType, message: 'Generating structure...' })
@@ -106,13 +119,15 @@ export async function generateSectionStreamed(
         system: buildPass1System(dict, manifest),
         messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml) }],
       },
-      (chunk) => { pass1Html += chunk }
+      (chunk) => { pass1Html += chunk },
+      { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
     )
     send({ type: 'pass1', section: sectionType, html: pass1Html })
 
-    // Pass 2
+    // Pass 2 — run if animation budget allows OR if there are unresolved placeholders
     let finalHtml = pass1Html
-    if (dict.rules.animation.budget !== 'none') {
+    const hasPlaceholders = pass1Html.includes('<!-- [ANIM:') || pass1Html.includes('<!-- [BG:')
+    if (dict.rules.animation.budget !== 'none' || hasPlaceholders) {
       send({ type: 'status', pass: 2, section: sectionType, message: 'Adding visual layer...' })
       let pass2Html = ''
       await provider.stream(
@@ -121,7 +136,8 @@ export async function generateSectionStreamed(
           system: buildPass2System(dict),
           messages: [{ role: 'user', content: buildPass2User(pass1Html) }],
         },
-        (chunk) => { pass2Html += chunk }
+        (chunk) => { pass2Html += chunk },
+        { pass: 'pass2_visual', label: `Pass 2 — ${sectionType} visual layer` }
       )
       finalHtml = pass2Html
       send({ type: 'pass2', section: sectionType, html: pass2Html })
@@ -129,11 +145,14 @@ export async function generateSectionStreamed(
 
     // Pass 3
     send({ type: 'status', pass: 3, section: sectionType, message: 'Validating...' })
-    const validationRaw = await provider.complete({
-      ...MODEL_CONFIG.pass3_validator,
-      system: PASS3_SYSTEM,
-      messages: [{ role: 'user', content: buildPass3User(finalHtml, manifest.pass3_auto_flags) }],
-    })
+    const validationRaw = await provider.complete(
+      {
+        ...MODEL_CONFIG.pass3_validator,
+        system: PASS3_SYSTEM,
+        messages: [{ role: 'user', content: buildPass3User(finalHtml, manifest.pass3_auto_flags) }],
+      },
+      { pass: 'pass3_validator', label: `Pass 3 — ${sectionType} validation` }
+    )
     const validation = safeParseJson<ValidationResult>(validationRaw)
     if (validation) {
       finalHtml = applyAutoFixes(finalHtml, validation)

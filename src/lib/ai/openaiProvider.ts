@@ -1,41 +1,91 @@
 import OpenAI from 'openai'
-import { AIProvider, CompletionParams } from './types'
+import { AIProvider, CompletionParams, AICallMeta } from './types'
+import { createPendingLog, estimateTokens, AICallLog } from '../logStore'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export class OpenAIProvider implements AIProvider {
-  async complete(params: CompletionParams): Promise<string> {
-    const isO = params.model.startsWith('o4') || params.model.startsWith('o3')
-    const res = await client.chat.completions.create({
-      model: params.model,
-      messages: [
-        ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
-        ...params.messages,
-      ],
-      ...(isO
-        ? { max_completion_tokens: params.max_tokens }
-        : { max_tokens: params.max_tokens, temperature: params.temperature }),
-      ...(params.response_format ? { response_format: params.response_format } : {}),
-    })
-    return res.choices[0]?.message?.content ?? ''
+  // Optional callback — set by sectionGenerator to forward log events via SSE
+  onLog?: (entry: AICallLog) => void
+
+  private emit(entry: AICallLog) {
+    this.onLog?.(entry)
   }
 
-  async stream(params: CompletionParams, onChunk: (c: string) => void): Promise<string> {
-    let full = ''
-    const stream = await client.chat.completions.create({
-      model: params.model,
-      messages: [
-        ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
-        ...params.messages,
-      ],
-      max_tokens: params.max_tokens,
-      temperature: params.temperature,
-      stream: true,
-    })
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content ?? ''
-      if (delta) { full += delta; onChunk(delta) }
+  async complete(params: CompletionParams, meta?: AICallMeta): Promise<string> {
+    const userMessage = params.messages.map((m) => m.content).join('\n')
+    const entry = createPendingLog(
+      meta?.pass ?? 'other',
+      meta?.label ?? params.model,
+      params.model,
+      params.system ?? '',
+      userMessage,
+    )
+    this.emit(entry)
+
+    const t0 = Date.now()
+    try {
+      const isO = params.model.startsWith('o4') || params.model.startsWith('o3')
+      const res = await client.chat.completions.create({
+        model: params.model,
+        messages: [
+          ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
+          ...params.messages,
+        ],
+        ...(isO
+          ? { max_completion_tokens: params.max_tokens }
+          : { max_tokens: params.max_tokens, temperature: params.temperature }),
+        ...(params.response_format ? { response_format: params.response_format } : {}),
+      })
+      const response = res.choices[0]?.message?.content ?? ''
+      this.emit({ ...entry, response, outputTokensEst: estimateTokens(response), durationMs: Date.now() - t0, status: 'success' })
+      return response
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      this.emit({ ...entry, durationMs: Date.now() - t0, status: 'error', error: msg })
+      throw err
     }
-    return full
+  }
+
+  async stream(params: CompletionParams, onChunk: (c: string) => void, meta?: AICallMeta): Promise<string> {
+    const userMessage = params.messages.map((m) => m.content).join('\n')
+    const entry = createPendingLog(
+      meta?.pass ?? 'other',
+      meta?.label ?? params.model,
+      params.model,
+      params.system ?? '',
+      userMessage,
+    )
+    entry.streaming = true
+    entry.status = 'streaming'
+    this.emit(entry)
+
+    const t0 = Date.now()
+    let full = ''
+    try {
+      const stream = await client.chat.completions.create({
+        model: params.model,
+        messages: [
+          ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
+          ...params.messages,
+        ],
+        max_tokens: params.max_tokens,
+        temperature: params.temperature,
+        stream: true,
+      })
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content ?? ''
+        if (delta) {
+          full += delta
+          onChunk(delta)
+        }
+      }
+      this.emit({ ...entry, response: full, outputTokensEst: estimateTokens(full), durationMs: Date.now() - t0, status: 'success' })
+      return full
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      this.emit({ ...entry, response: full, durationMs: Date.now() - t0, status: 'error', error: msg })
+      throw err
+    }
   }
 }

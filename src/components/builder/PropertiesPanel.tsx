@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, Code2, X, Loader2, Wand2, Paintbrush } from 'lucide-react'
 import { toast } from 'sonner'
-import { useLogStore } from '@/lib/logStore'
 
 interface PropertiesPanelProps {
   onRegenerate: (sectionId: string, customPrompt: string) => void
@@ -17,7 +16,6 @@ interface PropertiesPanelProps {
 
 export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
   const { page, selectedSectionId, setSelectedSection, updateSectionHtml, snapshotSections, revertSections, htmlSnapshots } = useBuilderStore()
-  const { addLog } = useLogStore()
   const section = page.sections.find((s) => s.id === selectedSectionId)
   const canRevert = section && htmlSnapshots[section.id] != null && htmlSnapshots[section.id] !== section.html
 
@@ -57,7 +55,6 @@ export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
         updateSectionHtml(section!.id, data.html)
         setAiStylePrompt('')
         toast.success('Style applied!')
-        if (data.log) addLog({ ...data.log, timestamp: Date.now(), pageTitle: page.title, pagePrompt: page.prompt, customPrompt: aiStylePrompt.trim() })
       } else {
         toast.error('No changes were made — try rephrasing')
       }

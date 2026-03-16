@@ -113,7 +113,6 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
     clearManifest,
   } = useBuilderStore()
 
-  const { addLog } = useLogStore()
   const [prompt, setPrompt] = useState('')
   const [showBlocks, setShowBlocks] = useState(false)
   const [globalStylePrompt, setGlobalStylePrompt] = useState('')
@@ -159,7 +158,6 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
           if (data.html?.trim()) {
             useBuilderStore.getState().updateSectionHtml(section.id, data.html)
             successCount++
-            if (data.log) addLog({ ...data.log, timestamp: Date.now(), pageTitle: page.title, pagePrompt: page.prompt, customPrompt: `[GLOBAL] ${globalStylePrompt.trim()}` })
           }
         } catch {}
       })
