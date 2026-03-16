@@ -362,6 +362,52 @@ export default function BuilderPage() {
     setSelectedSection(newSection.id)
 
     try {
+      const currentManifest = useBuilderStore.getState().manifest
+      if (currentManifest) {
+        const res = await fetch('/api/v2/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ manifest: currentManifest, sectionType: type }),
+        })
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (value) buffer += decoder.decode(value, { stream: !done })
+          if (done) {
+            // Process final buffer contents
+            const lines = buffer.split('\n')
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              try {
+                const event = JSON.parse(line.slice(6))
+                if ((event.type === 'pass1' || event.type === 'pass2' || event.type === 'complete') && event.html) {
+                  updateSectionHtml(newSection.id, event.html)
+                }
+                if (event.type === 'log' && event.entry) useLogStore.getState().upsertLog(event.entry)
+              } catch { /* ignore */ }
+            }
+            break
+          }
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const event = JSON.parse(line.slice(6))
+              if ((event.type === 'pass1' || event.type === 'pass2' || event.type === 'complete') && event.html) {
+                updateSectionHtml(newSection.id, event.html)
+              }
+              if (event.type === 'log' && event.entry) useLogStore.getState().upsertLog(event.entry)
+            } catch { /* ignore */ }
+          }
+        }
+        toast.success(`${type} added`)
+        return
+      }
+      // v1 fallback
       const ctx = buildPageContext(type, prompt, newSection.id, afterAddSections.length - 1)
       await streamSection(type, prompt, undefined, newSection.id, ctx, makeRunId(), 'add-section')
       toast.success(`${type} section added`)
@@ -379,18 +425,49 @@ export default function BuilderPage() {
 
     setSectionGenerating(sectionId, true)
     try {
+      // v2: use manifest pipeline when manifest is loaded
+      const currentManifest = useBuilderStore.getState().manifest
+      if (currentManifest) {
+        const res = await fetch('/api/v2/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            manifest: currentManifest,
+            sectionType: section.type,
+            customPrompt: customPrompt || undefined,
+          }),
+        })
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const event = JSON.parse(line.slice(6))
+              if ((event.type === 'pass1' || event.type === 'pass2' || event.type === 'complete') && event.html) {
+                updateSectionHtml(sectionId, event.html)
+              }
+              if (event.type === 'log' && event.entry) useLogStore.getState().upsertLog(event.entry)
+            } catch { /* ignore parse errors */ }
+          }
+        }
+        toast.success('Section regenerated (v2)')
+        return
+      }
+
+      // v1 fallback
       const prompt = page.prompt || 'general purpose webpage'
       const sectionIndex = page.sections.findIndex((s) => s.id === sectionId)
       const ctx = buildPageContext(section.type, prompt, sectionId, sectionIndex)
-      await streamSection(
-        section.type,
-        prompt,
-        customPrompt || undefined,
-        sectionId,
-        ctx,
-        makeRunId(),
-        'regenerate'
-      )
+      await streamSection(section.type, prompt, customPrompt || undefined, sectionId, ctx, makeRunId(), 'regenerate')
       toast.success('Section regenerated')
     } catch {
       toast.error('Regeneration failed')

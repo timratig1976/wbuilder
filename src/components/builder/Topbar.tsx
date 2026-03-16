@@ -401,7 +401,7 @@ function PatternPickerDrawer({ onClose }: { onClose: () => void }) {
 
 function ManifestDrawer({ onClose }: { onClose: () => void }) {
   const { manifest, clearManifest } = useBuilderStore()
-  const [tab, setTab] = useState<'overview' | 'tokens' | 'pages' | 'raw'>('overview')
+  const [tab, setTab] = useState<'overview' | 'tokens' | 'pages' | 'patterns' | 'raw'>('overview')
 
   if (!manifest) return null
 
@@ -425,7 +425,7 @@ function ManifestDrawer({ onClose }: { onClose: () => void }) {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-100 flex-shrink-0">
-        {(['overview', 'tokens', 'pages', 'raw'] as const).map((t) => (
+        {(['overview', 'tokens', 'pages', 'patterns', 'raw'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -433,7 +433,16 @@ function ManifestDrawer({ onClose }: { onClose: () => void }) {
               tab === t ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
-            {t}
+            {t === 'patterns' ? (
+              <span className="inline-flex items-center justify-center gap-1">
+                Patterns
+                {(manifest.selected_patterns?.length ?? 0) > 0 && (
+                  <span className="bg-violet-600 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                    {manifest.selected_patterns!.length}
+                  </span>
+                )}
+              </span>
+            ) : t}
           </button>
         ))}
       </div>
@@ -528,6 +537,55 @@ function ManifestDrawer({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
+        {tab === 'patterns' && (
+          <div className="p-4">
+            {!manifest.selected_patterns?.length ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Library className="w-10 h-10 text-gray-200 mb-3" />
+                <p className="text-sm font-medium text-gray-500 mb-1">No patterns selected</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Select patterns in the Briefing wizard (Step 3 — Design) or reopen via{' '}
+                  <span className="font-semibold text-indigo-500">Edit Manifest</span>.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {manifest.selected_patterns.map((p) => {
+                  const meta = PT_TYPE_META[p.type] ?? { emoji: '◈', color: 'text-gray-500', bg: 'bg-gray-100' }
+                  return (
+                    <div key={p.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                      {/* thumb + header row */}
+                      <div className="flex items-stretch">
+                        <div className="w-20 h-16 flex-shrink-0 bg-gray-100 overflow-hidden relative">
+                          <PatternPreviewThumb p={p as PatternEntry} />
+                        </div>
+                        <div className="flex-1 px-3 py-2 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-gray-900 leading-tight">{p.name}</span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${meta.bg} ${meta.color}`}>{meta.emoji} {p.type}</span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2">{p.preview_description ?? p.description}</p>
+                        </div>
+                      </div>
+                      {/* implementation details */}
+                      {(p.implementation?.css_snippet || p.implementation?.placeholder || p.implementation?.html_snippet) && (
+                        <div className="border-t border-gray-100 px-3 py-2 space-y-1 bg-gray-50">
+                          {p.implementation.placeholder && (
+                            <pre className="text-[10px] font-mono text-indigo-700 bg-indigo-50 rounded px-2 py-1 whitespace-pre-wrap">{p.implementation.placeholder}</pre>
+                          )}
+                          {p.implementation.css_snippet && (
+                            <pre className="text-[10px] font-mono text-gray-600 bg-white rounded px-2 py-1 overflow-x-auto whitespace-pre-wrap border border-gray-100">{p.implementation.css_snippet.slice(0, 200)}{p.implementation.css_snippet.length > 200 ? '…' : ''}</pre>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === 'raw' && (
           <div className="p-4">
             <pre className="text-[11px] text-gray-600 leading-relaxed whitespace-pre-wrap break-all font-mono bg-gray-50 rounded-xl p-4">
@@ -600,6 +658,40 @@ function calcRunCost(logs: import('@/lib/logStore').AICallLog[]): number | null 
   return totalUsd * USD_TO_EUR
 }
 
+// ── Shared nav button variants ────────────────────────────────────────────
+
+function NavBtn({
+  onClick, href, active, children, variant = 'ghost', disabled,
+}: {
+  onClick?: () => void
+  href?: string
+  active?: boolean
+  children: React.ReactNode
+  variant?: 'ghost' | 'primary' | 'danger' | 'accent'
+  disabled?: boolean
+}) {
+  const base = 'inline-flex items-center gap-1.5 text-xs font-medium rounded-md px-2.5 py-1.5 transition-colors whitespace-nowrap select-none'
+  const variants = {
+    ghost:   active
+      ? 'bg-gray-100 text-gray-900'
+      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+    primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
+    danger:  'text-gray-400 hover:bg-red-50 hover:text-red-600',
+    accent:  active
+      ? 'bg-violet-100 text-violet-800'
+      : 'text-violet-600 hover:bg-violet-50 hover:text-violet-800',
+  }
+  const cls = `${base} ${variants[variant]} ${disabled ? 'opacity-40 pointer-events-none' : ''}`
+  if (href) return <Link href={href} className={cls}>{children}</Link>
+  return <button onClick={onClick} disabled={disabled} className={cls}>{children}</button>
+}
+
+function Divider() {
+  return <div className="w-px h-4 bg-gray-200 mx-1 flex-shrink-0" />
+}
+
+// ── Main Topbar ────────────────────────────────────────────────────────────
+
 export function Topbar() {
   const { page, project, manifest, generating, clearSections, saveProject, newProject } = useBuilderStore()
   const { logs } = useLogStore()
@@ -608,6 +700,8 @@ export function Topbar() {
   const [showPatterns, setShowPatterns] = useState(false)
 
   const runCostEur = calcRunCost(logs)
+  const hasBrand = Object.values(project.brand).some((v) => v.trim() !== '')
+  const patternCount = manifest?.selected_patterns?.length ?? 0
 
   async function handleExport() {
     if (page.sections.length === 0) { toast.error('No sections to export'); return }
@@ -630,148 +724,153 @@ export function Topbar() {
     }
   }
 
-  function handleSave() {
-    saveProject()
-    toast.success(`"${project.name}" saved`)
-  }
-
+  function handleSave() { saveProject(); toast.success(`"${project.name}" saved`) }
   function handleNew() {
     if (!confirm('Start a new project? Unsaved changes will be lost.')) return
-    newProject()
-    toast.success('New project started')
+    newProject(); toast.success('New project started')
   }
-
   function handleClear() {
     if (page.sections.length === 0) return
     if (confirm('Clear all sections on this page?')) { clearSections(); toast.success('Page cleared') }
   }
 
-  const hasBrand = Object.values(project.brand).some((v) => v.trim() !== '')
-
   return (
-    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 flex-shrink-0 z-10 relative">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-gray-900 text-lg">PageCraft</span>
+    <header className="h-12 bg-white border-b border-gray-200 flex items-center px-3 gap-2 flex-shrink-0 z-10 relative">
+
+      {/* ── Logo ── */}
+      <div className="flex items-center gap-2 flex-shrink-0 mr-1">
+        <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center">
+          <Zap className="w-3.5 h-3.5 text-white" />
         </div>
-        <span className="text-gray-300">|</span>
-
-        {/* Sitemap button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowSitemap(!showSitemap)}
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span className="max-w-[140px] truncate">{project.name}</span>
-            <span className="text-gray-400 text-xs">/ {page.title}</span>
-          </button>
-          {showSitemap && <SitemapDrawer onClose={() => setShowSitemap(false)} />}
-        </div>
-
-        {generating && (
-          <span className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium bg-indigo-50 px-2.5 py-1 rounded-full">
-            <Loader2 className="w-3 h-3 animate-spin" /> AI is building your page...
-          </span>
-        )}
-
-        {!generating && runCostEur !== null && runCostEur > 0 && (
-          <span
-            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
-            title="Estimated cost of last generation run (generate + enhance passes)"
-          >
-            <DollarSign className="w-3 h-3" />
-            {runCostEur < 0.01
-              ? '<€0.01'
-              : `€${runCostEur.toFixed(2)}`}
-            <span className="text-emerald-500 font-normal">est.</span>
-          </span>
-        )}
+        <span className="font-bold text-gray-900 text-sm tracking-tight">PageCraft</span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-400 font-medium">{project.pages.length} page{project.pages.length !== 1 ? 's' : ''} · {page.sections.length} sections</span>
+      <Divider />
 
-        {/* Brand style button → full page */}
-        <Link href="/brand">
-          <Button
-            variant="ghost" size="sm"
-            className={`text-xs gap-1.5 ${hasBrand ? 'text-pink-600 hover:text-pink-700' : 'text-gray-500 hover:text-pink-600'}`}
-          >
-            <Paintbrush className="w-4 h-4" /> Brand
-            {hasBrand && <span className="w-1.5 h-1.5 rounded-full bg-pink-500 inline-block" />}
-          </Button>
-        </Link>
-
-        {/* v2: Manifest viewer (only when manifest loaded) */}
-        {manifest && (
-          <button
-            onClick={() => setShowManifest(!showManifest)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-          >
-            <FileJson className="w-3.5 h-3.5" /> Manifest
-          </button>
-        )}
-
-        {/* v2: Briefing — edit mode when manifest loaded, new mode otherwise */}
-        <Link href={manifest ? '/briefing?edit=1' : '/briefing'}>
-          <Button variant="ghost" size="sm" className={`text-xs gap-1.5 ${manifest ? 'text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}` }>
-            {manifest ? <Pencil className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-            {manifest ? 'Edit Manifest' : 'Briefing'}
-          </Button>
-        </Link>
-
-        {/* v2: Pattern Picker */}
+      {/* ── Project / page breadcrumb ── */}
+      <div className="relative flex-shrink-0">
         <button
-          onClick={() => { setShowPatterns(!showPatterns); setShowManifest(false) }}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 px-2.5 py-1.5 rounded-lg hover:bg-violet-50 transition-colors"
+          onClick={() => setShowSitemap(!showSitemap)}
+          className={`inline-flex items-center gap-1 text-xs rounded-md px-2 py-1.5 transition-colors ${showSitemap ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
         >
-          <Library className="w-4 h-4" /> Patterns
+          <Globe className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="font-medium max-w-[110px] truncate">{project.name}</span>
+          <span className="text-gray-400">/</span>
+          <span className="max-w-[80px] truncate text-gray-500">{page.title}</span>
+          <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${showSitemap ? 'rotate-180' : ''}`} />
         </button>
-
-        {/* v2: Discovery */}
-        <Link href="/discovery">
-          <Button variant="ghost" size="sm" className="text-xs gap-1.5 text-violet-600 hover:text-violet-800 hover:bg-violet-50">
-            <Compass className="w-4 h-4" /> Discovery
-          </Button>
-        </Link>
-
-        <Button variant="ghost" size="sm" onClick={handleNew} className="text-gray-500 hover:text-indigo-600 text-xs gap-1.5">
-          <FilePlus className="w-4 h-4" /> New
-        </Button>
-
-        <Button variant="ghost" size="sm" onClick={handleSave} className="text-gray-500 hover:text-indigo-600 text-xs gap-1.5">
-          <Save className="w-4 h-4" /> Save
-        </Button>
-
-        <Link href="/logs">
-          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-indigo-600 text-xs gap-1.5 relative">
-            <BarChart2 className="w-4 h-4" /> AI Logs
-            {logs.length > 0 && (
-              <span className="bg-indigo-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {logs.length > 99 ? '99+' : logs.length}
-              </span>
-            )}
-          </Button>
-        </Link>
-
-        <div className="w-px h-5 bg-gray-200" />
-
-        <Button variant="ghost" size="sm" onClick={handleClear} disabled={page.sections.length === 0} className="text-gray-400 hover:text-red-500 text-xs">
-          <Trash2 className="w-4 h-4 mr-1" /> Clear
-        </Button>
-
-        <Button onClick={handleExport} disabled={page.sections.length === 0} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm gap-1.5">
-          <Download className="w-4 h-4" /> Export HTML
-        </Button>
+        {showSitemap && <SitemapDrawer onClose={() => setShowSitemap(false)} />}
       </div>
 
-      {showSitemap && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowSitemap(false)} />
+      {/* ── Status pill ── */}
+      {generating && (
+        <span className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100 flex-shrink-0">
+          <Loader2 className="w-3 h-3 animate-spin" /> Generating…
+        </span>
       )}
+      {!generating && runCostEur !== null && runCostEur > 0 && (
+        <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 flex-shrink-0" title="Estimated cost of last generation run">
+          <DollarSign className="w-3 h-3" />
+          {runCostEur < 0.01 ? '<€0.01' : `€${runCostEur.toFixed(2)}`}
+        </span>
+      )}
+
+      {/* ── Spacer ── */}
+      <div className="flex-1" />
+
+      {/* ── Stats ── */}
+      <span className="text-[11px] text-gray-400 font-medium flex-shrink-0 hidden xl:block">
+        {project.pages.length}p · {page.sections.length}s
+      </span>
+
+      <Divider />
+
+      {/* ── Design group: Brand · Manifest · Edit Manifest · Patterns · Discovery ── */}
+      <div className="flex items-center gap-0.5">
+        <NavBtn href="/brand" active={hasBrand}>
+          <Paintbrush className="w-3.5 h-3.5" />
+          Brand
+          {hasBrand && <span className="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0" />}
+        </NavBtn>
+
+        {manifest ? (
+          <>
+            <NavBtn onClick={() => { setShowManifest(!showManifest); setShowPatterns(false) }} active={showManifest}>
+              <FileJson className="w-3.5 h-3.5" />
+              Manifest
+            </NavBtn>
+            <NavBtn href="/briefing?edit=1">
+              <Pencil className="w-3.5 h-3.5" />
+              Edit Manifest
+            </NavBtn>
+          </>
+        ) : (
+          <NavBtn href="/briefing">
+            <Sparkles className="w-3.5 h-3.5" />
+            Briefing
+          </NavBtn>
+        )}
+
+        <NavBtn
+          onClick={() => { setShowPatterns(!showPatterns); setShowManifest(false) }}
+          active={showPatterns}
+          variant="accent"
+        >
+          <Library className="w-3.5 h-3.5" />
+          Patterns
+          {patternCount > 0 && (
+            <span className="bg-violet-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
+              {patternCount}
+            </span>
+          )}
+        </NavBtn>
+
+        <NavBtn href="/discovery" variant="accent">
+          <Compass className="w-3.5 h-3.5" />
+          Discovery
+        </NavBtn>
+      </div>
+
+      <Divider />
+
+      {/* ── Action group: New · Save · Logs · Clear ── */}
+      <div className="flex items-center gap-0.5">
+        <NavBtn onClick={handleNew}>
+          <FilePlus className="w-3.5 h-3.5" />
+          New
+        </NavBtn>
+
+        <NavBtn onClick={handleSave}>
+          <Save className="w-3.5 h-3.5" />
+          Save
+        </NavBtn>
+
+        <NavBtn href="/logs">
+          <BarChart2 className="w-3.5 h-3.5" />
+          AI Logs
+          {logs.length > 0 && (
+            <span className="bg-indigo-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
+              {logs.length > 9 ? '9+' : logs.length}
+            </span>
+          )}
+        </NavBtn>
+
+        <NavBtn onClick={handleClear} variant="danger" disabled={page.sections.length === 0}>
+          <Trash2 className="w-3.5 h-3.5" />
+          Clear
+        </NavBtn>
+      </div>
+
+      <Divider />
+
+      {/* ── Primary CTA ── */}
+      <NavBtn onClick={handleExport} variant="primary" disabled={page.sections.length === 0}>
+        <Download className="w-3.5 h-3.5" />
+        Export HTML
+      </NavBtn>
+
+      {/* ── Overlays ── */}
+      {showSitemap && <div className="fixed inset-0 z-40" onClick={() => setShowSitemap(false)} />}
 
       {showManifest && manifest && (
         <>

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { useBuilderStore, BrandStyle } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowLeft, Zap, Type, Palette, LayoutTemplate, Sparkles, Check, Wand2, Loader2, RotateCcw, ChevronDown, History, Paintbrush, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Zap, Type, Palette, LayoutTemplate, Sparkles, Check, Wand2, Loader2, RotateCcw, ChevronDown, History, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 
 const FONT_OPTIONS = [
@@ -456,22 +456,35 @@ function timeAgo(ts: number): string {
 
 export default function BrandPage() {
   const {
-    project, setBrand,
+    project, manifest, setBrand,
     snapshotAllSections, revertAllSections,
     pushHistory, revertToHistory, clearHistory,
-    syncColorsAcrossPages, injectCssTokens,
     updateSectionHtmlAcrossPages,
     history,
   } = useBuilderStore()
-  const brand = project.brand
+
+  // Always derive brand from manifest when one is loaded — single source of truth
+  const brand: BrandStyle = manifest ? {
+    ...project.brand,
+    primaryColor:    manifest.design_tokens.colors.primary,
+    secondaryColor:  manifest.design_tokens.colors.secondary,
+    accentColor:     manifest.design_tokens.colors.accent,
+    highlightColor:  manifest.design_tokens.colors.highlight,
+    backgroundColor: manifest.design_tokens.colors.background,
+    surfaceColor:    manifest.design_tokens.colors.surface,
+    darkColor:       manifest.design_tokens.colors.dark,
+    textColor:       manifest.design_tokens.colors.text,
+    textMutedColor:  manifest.design_tokens.colors.text_muted,
+    fontFamily:      manifest.design_tokens.typography.font_heading,
+    fontBody:        manifest.design_tokens.typography.font_body,
+    headingWeight:   manifest.design_tokens.typography.heading_weight,
+    tone:            manifest.site.tone,
+  } : project.brand
 
   const [applying, setApplying] = useState(false)
-  const [syncing, setSyncing] = useState(false)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [hasApplied, setHasApplied] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const prevBrandRef = useRef<BrandStyle>(brand)
-
   function update(key: keyof BrandStyle, value: string) {
     setBrand({ [key]: value })
   }
@@ -480,34 +493,6 @@ export default function BrandPage() {
   const keyColorFields: (keyof BrandStyle)[] = ['primaryColor', 'secondaryColor', 'accentColor', 'fontFamily']
   const completedFields = keyColorFields.filter((k) => brand[k]?.trim() !== '').length
   const totalFields = keyColorFields.length
-
-  // ── Sync Colors (instant, no AI) ──────────────────────────────────────────
-  function handleSyncColors() {
-    const prev = prevBrandRef.current
-    const colorKeys: (keyof BrandStyle)[] = [
-      'primaryColor', 'secondaryColor', 'accentColor', 'highlightColor',
-      'backgroundColor', 'surfaceColor', 'darkColor', 'textColor', 'textMutedColor',
-    ]
-    const oldColors: Record<string, string> = {}
-    const newColors: Record<string, string> = {}
-    colorKeys.forEach((k) => {
-      if (prev[k] && brand[k] && prev[k] !== brand[k]) {
-        oldColors[k] = prev[k]
-        newColors[k] = brand[k]
-      }
-    })
-    const changedCount = Object.keys(oldColors).length
-    if (changedCount === 0) {
-      toast('No color changes detected since last sync')
-      return
-    }
-    setSyncing(true)
-    pushHistory(`Before color sync (${changedCount} token${changedCount > 1 ? 's' : ''})`)
-    syncColorsAcrossPages(oldColors, newColors)
-    prevBrandRef.current = { ...brand }
-    setSyncing(false)
-    toast.success(`Synced ${changedCount} color token${changedCount > 1 ? 's' : ''} across all sections`)
-  }
 
   // ── Apply Brand via AI (constrained) ─────────────────────────────────────
   const handleApplyBrand = useCallback(async () => {
@@ -548,7 +533,6 @@ export default function BrandPage() {
     )
     setApplying(false)
     setHasApplied(true)
-    prevBrandRef.current = { ...brand }
     toast.success(`Brand applied to ${successCount} sections!`)
   }, [brand, project, snapshotAllSections, pushHistory, updateSectionHtmlAcrossPages, totalSections])
 
@@ -613,34 +597,6 @@ export default function BrandPage() {
           >
             <History className="w-3.5 h-3.5" />
             History {history.length > 0 && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 rounded-full">{history.length}</span>}
-          </Button>
-
-          {/* Inject CSS Tokens button — fixes existing sections with no :root vars */}
-          {totalSections > 0 && (
-            <Button
-              onClick={() => {
-                pushHistory('Before clean legacy tokens')
-                injectCssTokens()
-                toast.success('Legacy token blocks cleaned from sections')
-              }}
-              variant="outline"
-              size="sm"
-              className="text-xs gap-1.5 border-teal-300 text-teal-600 hover:bg-teal-50"
-            >
-              <Zap className="w-3.5 h-3.5" /> Clean Tokens
-            </Button>
-          )}
-
-          {/* Sync Colors button */}
-          <Button
-            onClick={handleSyncColors}
-            disabled={syncing || totalSections === 0}
-            variant="outline"
-            size="sm"
-            className="text-xs gap-1.5 border-emerald-300 text-emerald-600 hover:bg-emerald-50"
-          >
-            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paintbrush className="w-3.5 h-3.5" />}
-            Sync Colors
           </Button>
 
           {/* Undo last apply */}
@@ -822,6 +778,78 @@ export default function BrandPage() {
                   <span className="text-xs font-medium text-gray-600">{opt.label}</span>
                 </button>
               ))}
+            </div>
+          </CollapsibleSection>
+
+          {/* Navbar section */}
+          <CollapsibleSection icon={<LayoutTemplate className="w-4 h-4 text-blue-500" />} title="Navbar" color="#3b82f6" badge={manifest?.navbar?.style || undefined}>
+            <div className="space-y-4">
+              {/* Navbar Style */}
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Navbar Style</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'sticky-blur', label: 'Sticky Blur', desc: 'Stays fixed with blur effect' },
+                    { value: 'static', label: 'Static', desc: 'Normal scroll behavior' },
+                    { value: 'transparent-hero', label: 'Transparent Hero', desc: 'Transparent over hero' },
+                    { value: 'hidden-scroll', label: 'Hide on Scroll', desc: 'Hides when scrolling down' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        if (manifest) {
+                          const newManifest = { ...manifest, navbar: { ...manifest.navbar, style: opt.value as any } }
+                          useBuilderStore.getState().setManifest(newManifest)
+                        }
+                      }}
+                      className={`flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+                        manifest?.navbar?.style === opt.value
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-xs font-semibold text-gray-800">{opt.label}</span>
+                      <span className="text-[10px] text-gray-500">{opt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA Button Toggle */}
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">CTA Button</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (manifest) {
+                        const newManifest = { ...manifest, navbar: { ...manifest.navbar, cta_button: !manifest.navbar?.cta_button } }
+                        useBuilderStore.getState().setManifest(newManifest)
+                      }
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                      manifest?.navbar?.cta_button
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:border-blue-200'
+                    }`}
+                  >
+                    <span className="text-xs font-medium">{manifest?.navbar?.cta_button ? '✓ CTA Enabled' : 'CTA Disabled'}</span>
+                  </button>
+                  {manifest?.navbar?.cta_button && (
+                    <input
+                      type="text"
+                      value={manifest?.navbar?.cta_label || ''}
+                      onChange={(e) => {
+                        if (manifest) {
+                          const newManifest = { ...manifest, navbar: { ...manifest.navbar, cta_label: e.target.value } }
+                          useBuilderStore.getState().setManifest(newManifest)
+                        }
+                      }}
+                      placeholder="CTA Label"
+                      className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </CollapsibleSection>
 

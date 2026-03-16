@@ -15,7 +15,7 @@ function buildGoogleFontUrl(manifest: SiteManifest): string {
   return `https://fonts.googleapis.com/css2?${families}&display=swap`
 }
 
-function buildRootCss(manifest: SiteManifest): string {
+export function buildRootCss(manifest: SiteManifest): string {
   const { colors, typography } = manifest.design_tokens
   return `:root {
   --color-primary:    ${colors.primary};
@@ -35,7 +35,7 @@ function buildRootCss(manifest: SiteManifest): string {
 }`
 }
 
-function buildBaseStyle(manifest: SiteManifest): string {
+export function buildBaseStyle(manifest: SiteManifest): string {
   return `${buildRootCss(manifest)}
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
@@ -50,6 +50,49 @@ function buildBaseStyle(manifest: SiteManifest): string {
     letter-spacing: var(--tracking-heading);
     line-height: var(--lh-heading);
   }
+
+  /* ── Custom token utility classes ─────────────────────────────────────────
+     These ensure bg-primary, text-accent etc work even when Tailwind CDN
+     hasn't re-scanned dynamically injected HTML. Always wins via specificity.
+  ────────────────────────────────────────────────────────────────────────── */
+  .bg-primary    { background-color: var(--color-primary)    !important; }
+  .bg-secondary  { background-color: var(--color-secondary)  !important; }
+  .bg-accent     { background-color: var(--color-accent)     !important; }
+  .bg-highlight  { background-color: var(--color-highlight)  !important; }
+  .bg-dark       { background-color: var(--color-dark)       !important; }
+  .bg-surface    { background-color: var(--color-surface)    !important; }
+  .text-primary  { color: var(--color-primary)               !important; }
+  .text-secondary{ color: var(--color-secondary)             !important; }
+  .text-accent   { color: var(--color-accent)                !important; }
+  .text-highlight{ color: var(--color-highlight)             !important; }
+  .text-dark     { color: var(--color-dark)                  !important; }
+  .text-muted    { color: var(--color-text-muted)            !important; }
+  .border-primary   { border-color: var(--color-primary)     !important; }
+  .border-accent    { border-color: var(--color-accent)      !important; }
+  .border-highlight { border-color: var(--color-highlight)   !important; }
+  .font-display  { font-family: var(--font-heading)          !important; }
+  .font-body     { font-family: var(--font-body)             !important; }
+  
+  /* Gradient colors for gradient text - complete set for all token combinations */
+  .from-primary { --tw-gradient-from: var(--color-primary) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-primary) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-secondary { --tw-gradient-from: var(--color-secondary) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-secondary) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-accent { --tw-gradient-from: var(--color-accent) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-accent) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-highlight { --tw-gradient-from: var(--color-highlight) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-highlight) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-dark { --tw-gradient-from: var(--color-dark) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-dark) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-surface { --tw-gradient-from: var(--color-surface) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-surface) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-background { --tw-gradient-from: var(--color-background) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-background) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-text { --tw-gradient-from: var(--color-text) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-text) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .from-muted { --tw-gradient-from: var(--color-text-muted) var(--tw-gradient-from-position); --tw-gradient-to: var(--color-text-muted) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  
+  .to-primary { --tw-gradient-to: var(--color-primary) var(--tw-gradient-to-position); }
+  .to-secondary { --tw-gradient-to: var(--color-secondary) var(--tw-gradient-to-position); }
+  .to-accent { --tw-gradient-to: var(--color-accent) var(--tw-gradient-to-position); }
+  .to-highlight { --tw-gradient-to: var(--color-highlight) var(--tw-gradient-to-position); }
+  .to-dark { --tw-gradient-to: var(--color-dark) var(--tw-gradient-to-position); }
+  .to-surface { --tw-gradient-to: var(--color-surface) var(--tw-gradient-to-position); }
+  .to-background { --tw-gradient-to: var(--color-background) var(--tw-gradient-to-position); }
+  .to-text { --tw-gradient-to: var(--color-text) var(--tw-gradient-to-position); }
+  .to-muted { --tw-gradient-to: var(--color-text-muted) var(--tw-gradient-to-position); }
   /* Strip any stray per-section :root blocks injected by older generator runs */
   /* (harmless duplicate — browser last-write-wins but keeping DOM clean) */
   @media (prefers-reduced-motion: reduce) {
@@ -69,7 +112,7 @@ function buildBaseStyle(manifest: SiteManifest): string {
  * Before: <script>const btn = document.getElementById('x')</script>
  * After:  <script>;(function(){const btn = document.getElementById('x')})()</script>
  */
-function scopeScripts(html: string): string {
+export function scopeScripts(html: string): string {
   return html.replace(
     /<script(\b[^>]*)>([\s\S]*?)<\/script>/gi,
     (match, attrs: string, body: string) => {
@@ -77,7 +120,16 @@ function scopeScripts(html: string): string {
       if (/\bsrc\s*=/i.test(attrs)) return match
       const trimmed = body.trim()
       if (!trimmed) return match
-      return `<script${attrs}>;(function(){\n${trimmed}\n})();<\/script>`
+      // Patch setInterval/setTimeout so their callbacks are wrapped in try/catch.
+      // This prevents stale element references (word-cycle, animations) from spamming
+      // the console after a section is surgically rewritten in the iframe.
+      const patched = trimmed
+        .replace(/\bsetInterval\s*\(/g, '__si(')
+        .replace(/\bsetTimeout\s*\(/g, '__st(')
+      return `<script${attrs}>;(function(){
+var __si=function(fn,d){return setInterval(function(){try{fn()}catch(e){}},d)};
+var __st=function(fn,d){return setTimeout(function(){try{fn()}catch(e){}},d)};
+try{\n${patched}\n}catch(e){}})();<\/script>`
     }
   )
 }
@@ -90,7 +142,30 @@ export function assemblePage(title: string, sections: Section[]): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary:    'var(--color-primary)',
+            secondary:  'var(--color-secondary)',
+            accent:     'var(--color-accent)',
+            highlight:  'var(--color-highlight)',
+            background: 'var(--color-background)',
+            surface:    'var(--color-surface)',
+            dark:       'var(--color-dark)',
+            'brand-text': 'var(--color-text)',
+            muted:      'var(--color-text-muted)',
+          },
+          fontFamily: {
+            display: 'var(--font-heading)',
+            body:    'var(--font-body)',
+          },
+        },
+      },
+    }
+  <\/script>
+  <script src="https://cdn.tailwindcss.com"><\/script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
@@ -119,6 +194,29 @@ export function assemblePreview(sections: Section[], manifest?: SiteManifest | n
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary:    'var(--color-primary)',
+            secondary:  'var(--color-secondary)',
+            accent:     'var(--color-accent)',
+            highlight:  'var(--color-highlight)',
+            background: 'var(--color-background)',
+            surface:    'var(--color-surface)',
+            dark:       'var(--color-dark)',
+            'brand-text': 'var(--color-text)',
+            muted:      'var(--color-text-muted)',
+          },
+          fontFamily: {
+            display: 'var(--font-heading)',
+            body:    'var(--font-body)',
+          },
+        },
+      },
+    }
+  <\/script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

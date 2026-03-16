@@ -24,6 +24,7 @@ export interface Section {
   html: string
   prompt: string
   generating: boolean
+  forceRender?: boolean  // Set true when section is added to force initial canvas render
 }
 
 export interface Page {
@@ -228,7 +229,27 @@ export const useBuilderStore = create<BuilderStore>()(
           })),
         setManifest: (manifest) => set((s) => ({
           manifest,
-          project: { ...s.project, manifest, updatedAt: Date.now() },
+          project: {
+            ...s.project,
+            manifest,
+            updatedAt: Date.now(),
+            brand: {
+              ...s.project.brand,
+              primaryColor:    manifest.design_tokens.colors.primary,
+              secondaryColor:  manifest.design_tokens.colors.secondary,
+              accentColor:     manifest.design_tokens.colors.accent,
+              highlightColor:  manifest.design_tokens.colors.highlight,
+              backgroundColor: manifest.design_tokens.colors.background,
+              surfaceColor:    manifest.design_tokens.colors.surface,
+              darkColor:       manifest.design_tokens.colors.dark,
+              textColor:       manifest.design_tokens.colors.text,
+              textMutedColor:  manifest.design_tokens.colors.text_muted,
+              fontFamily:      manifest.design_tokens.typography.font_heading,
+              fontBody:        manifest.design_tokens.typography.font_body,
+              headingWeight:   manifest.design_tokens.typography.heading_weight,
+              tone:            manifest.site.tone,
+            },
+          },
         })),
         clearManifest: () => set((s) => ({
           manifest: null,
@@ -370,15 +391,29 @@ export const useBuilderStore = create<BuilderStore>()(
 
         addSection: (type, html, prompt) =>
           set((s) => withPage({
-            project: updateActivePage(s.project, (p) => ({
-              ...p,
-              updatedAt: Date.now(),
-              sections: [...p.sections, {
+            project: updateActivePage(s.project, (p) => {
+              const newSection = {
                 id: nanoid(), type,
                 label: type.charAt(0).toUpperCase() + type.slice(1),
                 html, prompt, generating: false,
-              }],
-            })),
+              }
+              // navbar always first, footer always last
+              let sections: typeof p.sections
+              if (type === 'navbar') {
+                sections = [newSection, ...p.sections]
+              } else if (type === 'footer') {
+                sections = [...p.sections, newSection]
+              } else {
+                // insert before footer if one exists, otherwise at end
+                const footerIdx = p.sections.findIndex((s) => s.type === 'footer')
+                if (footerIdx !== -1) {
+                  sections = [...p.sections.slice(0, footerIdx), newSection, ...p.sections.slice(footerIdx)]
+                } else {
+                  sections = [...p.sections, newSection]
+                }
+              }
+              return { ...p, updatedAt: Date.now(), sections }
+            }),
           })),
 
         updateSectionHtmlAcrossPages: (pageId, sectionId, html) =>
@@ -550,7 +585,11 @@ export const useBuilderStore = create<BuilderStore>()(
           set((s) => {
             const found = s.savedProjects.find((p) => p.id === id)
             if (!found) return s
-            return { ...withPage({ project: found }), selectedSectionId: null }
+            return {
+              ...withPage({ project: found }),
+              manifest: found.manifest ?? null,
+              selectedSectionId: null,
+            }
           }),
 
         deleteProject: (id) =>
@@ -567,6 +606,10 @@ export const useBuilderStore = create<BuilderStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.page = getActivePage(state.project)
+          // Ensure top-level manifest stays in sync with the persisted project.manifest
+          if (state.project.manifest) {
+            state.manifest = state.project.manifest
+          }
         }
       },
       partialize: (s) => ({

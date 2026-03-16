@@ -10,7 +10,21 @@ RULES:
 - Respond with ONLY valid JSON. No text, no markdown, no explanation.
 - All colors as exact hex values (#RRGGBB).
 - All Tailwind classes as exact strings ("text-4xl md:text-5xl").
-- All font names in CSS format ("'Inter', sans-serif").`
+- All font names in CSS format ("'Inter', sans-serif").
+
+COLOR PALETTE REQUIREMENTS (critical — do NOT generate washed-out palettes):
+- "background": light but NOT white — warm off-white, light stone, light sand (e.g. #f7f4ef, #f2ede6, #faf9f7)
+- "surface": slightly darker than background for card/section contrast (e.g. #ede8e0, #e8e2d9, #f0ebe3)
+- "dark": a RICH dark color for hero/footer sections — deep navy, charcoal, dark slate, deep brown, NOT #333 (e.g. #1a1a2e, #1c2333, #1e1b18, #0f1923, #1a1208)
+- "primary": a STRONG, saturated brand color — gold, amber, navy, teal, rust, NOT a pastel (e.g. #c8973a, #1e4d8c, #2a7a6a, #b85c2a, #8b1f3f)
+- "secondary": a complementary mid-tone (e.g. #2c4a7c, #5a3e28, #1a5c4a)
+- "accent": vibrant highlight for links/icons (similar family to primary but lighter/brighter)
+- "highlight": bright warm tone for emphasized words in headings (e.g. #e8b84b, #f0c060, #d4943c)
+- "text": DARK readable text — near-black (e.g. #1a1612, #0f0d0a, #1c1917, #111827)
+- "text_muted": medium gray — NOT too light (e.g. #6b6560, #7a7068, #64748b)
+
+CONTRAST RULE: text on background MUST have contrast ratio ≥ 7:1. Never generate text lighter than #555.
+DEPTH RULE: dark must be visually MUCH darker than background. Minimum perceived difference of 60% lightness.`
 
 interface SelectedPattern {
   id: string; name: string; description: string; type: string
@@ -300,6 +314,7 @@ ${nav.style === 'transparent-hero' ? '- Add to <nav>: class "absolute top-0 left
 - CTA button: hidden on mobile (hidden md:flex), background: var(--color-primary), text white, rounded, px-4 py-2
 - Hamburger icon: visible only mobile (md:hidden), opens a mobile overlay menu below
 - Mobile menu: full-width dropdown below nav, hidden by default, toggled via JS onclick
+- Mobile menu toggle JS MUST use null-safe pattern: const m = document.getElementById('...'); if (m) m.classList.toggle('hidden');
 - ALL colors via var(--color-*) — no hardcoded hex values`
   }
 

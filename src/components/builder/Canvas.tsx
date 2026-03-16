@@ -2,13 +2,14 @@
 
 import { useEffect, useRef } from 'react'
 import { useBuilderStore } from '@/lib/store'
-import { assemblePreview } from '@/lib/assembler'
+import { assemblePreview, buildBaseStyle, scopeScripts } from '@/lib/assembler'
 import { Loader2, Monitor, Smartphone, Plus } from 'lucide-react'
 
 export function Canvas() {
   const { page, manifest, selectedSectionId, previewMode, generating, setSelectedSection, setPreviewMode } =
     useBuilderStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const lastFullWriteRef = useRef<number>(0)
 
   const sections = page.sections
   const sectionCount = sections.length
@@ -21,12 +22,13 @@ export function Canvas() {
     const html = assemblePreview(sections, manifest)
     const doc = iframe.contentDocument || iframe.contentWindow?.document
     if (!doc) return
+    lastFullWriteRef.current = Date.now()
     doc.open()
     doc.write(html)
     doc.close()
 
     const afterWrite = () => {
-      // Re-attach click listeners
+      // Re-attach click listeners only — assemblePreview already wrote correct HTML
       const sectionEls = doc.querySelectorAll<HTMLElement>('[data-section-id]')
       sectionEls.forEach((el) => {
         el.addEventListener('click', (e) => {
@@ -38,31 +40,35 @@ export function Canvas() {
           }
         })
       })
-      // Re-apply any section HTML that was surgically updated (e.g. after mobile toggle)
-      const currentSections = useBuilderStore.getState().page.sections
-      currentSections.forEach((s) => {
-        if (s.html.startsWith('<!--')) return
-        const el = doc.querySelector<HTMLElement>(`[data-section-id="${s.id}"]`)
-        if (!el) return
-        el.innerHTML = ''
-        try {
-          const frag = doc.createRange().createContextualFragment(s.html.trim())
-          el.appendChild(frag)
-        } catch {
-          el.innerHTML = s.html.trim()
-        }
-      })
     }
     iframe.addEventListener('load', afterWrite, { once: true })
     afterWrite()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sectionCount, sectionIds, previewMode])
+  }, [sectionCount, sectionIds, previewMode, manifest])
+
+  // Surgically update base styles (CSS vars + token utility classes) when manifest changes
+  // (without triggering a full iframe rewrite that would flicker the page)
+  useEffect(() => {
+    if (!manifest) return
+    const iframe = iframeRef.current
+    if (!iframe) return
+    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!doc || !doc.head) return
+    let el = doc.getElementById('root-tokens') as HTMLStyleElement | null
+    if (!el) {
+      el = doc.createElement('style')
+      el.id = 'root-tokens'
+      doc.head.appendChild(el)
+    }
+    el.textContent = buildBaseStyle(manifest)
+  }, [manifest])
 
   // Surgical per-section HTML update — no full rewrite needed
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
-    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    const win = iframe.contentWindow
+    const doc = iframe.contentDocument || win?.document
     if (!doc || !doc.body) return
     sections.forEach((s) => {
       const el = doc.querySelector<HTMLElement>(`[data-section-id="${s.id}"]`)
@@ -70,16 +76,24 @@ export function Canvas() {
       // Skip placeholders — shimmer JS inside iframe handles those
       if (s.html.startsWith('<!--')) return
       const next = s.html.trim()
-      // Only update if content actually changed
+      // Only update if content actually changed (hash check)
       if (el.getAttribute('data-html-hash') === next.length.toString() + next.slice(0, 32)) return
       el.setAttribute('data-html-hash', next.length.toString() + next.slice(0, 32))
+      // Clear all intervals/timeouts in iframe before rewriting so stale setInterval
+      // callbacks (word-cycle, animations) don't crash on missing elements
+      if (win) {
+        for (let i = 0; i <= 1000; i++) {
+          try { win.clearInterval(i); win.clearTimeout(i) } catch { /* ignore */ }
+        }
+      }
       // Use createContextualFragment so <script> tags execute
       el.innerHTML = ''
+      const safe = scopeScripts(next)
       try {
-        const frag = doc.createRange().createContextualFragment(next)
+        const frag = doc.createRange().createContextualFragment(safe)
         el.appendChild(frag)
       } catch {
-        el.innerHTML = next
+        el.innerHTML = safe
       }
     })
   }, [sections])
@@ -89,18 +103,21 @@ export function Canvas() {
     const iframe = iframeRef.current
     if (!iframe) return
     const doc = iframe.contentDocument || iframe.contentWindow?.document
-    if (!doc) return
+    if (!doc?.body) return
     const sectionEls = doc.querySelectorAll<HTMLElement>('[data-section-id]')
     sectionEls.forEach((el) => {
+      if (!el) return
       const id = el.getAttribute('data-section-id')
-      if (id === selectedSectionId) {
-        el.classList.add('selected')
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      } else {
-        el.classList.remove('selected')
-      }
+      try {
+        if (id === selectedSectionId) {
+          el.classList.add('selected')
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        } else {
+          el.classList.remove('selected')
+        }
+      } catch { /* iframe mid-rewrite — skip */ }
     })
-  }, [selectedSectionId])
+  }, [selectedSectionId, sectionIds])
 
   const isGenerating = generating || page.sections.some((s) => s.generating)
 

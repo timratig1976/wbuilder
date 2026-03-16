@@ -101,6 +101,92 @@ function LogEntry({ log }: { log: AICallLog }) {
   )
 }
 
+// Extract section name from log label e.g. "Pass 1 — hero structure" → "hero"
+// Manifest logs get their own group key
+function extractSection(log: AICallLog): string {
+  if (log.pass === 'manifest') return '__manifest__'
+  // Label format: "Pass N — <section> <suffix>"
+  const m = log.label.match(/—\s*(.+?)(?:\s+(?:structure|visual layer|validation))?$/i)
+  return m ? m[1].trim().toLowerCase() : log.label.toLowerCase()
+}
+
+
+function SectionGroup({ name, logs }: { name: string; logs: AICallLog[] }) {
+  const [open, setOpen] = useState(true)
+  const totalIn  = logs.reduce((s, l) => s + l.inputTokensEst, 0)
+  const totalOut = logs.reduce((s, l) => s + l.outputTokensEst, 0)
+  const totalMs  = logs.reduce((s, l) => s + l.durationMs, 0)
+  const hasError = logs.some((l) => l.status === 'error')
+  const isStreaming = logs.some((l) => l.status === 'streaming')
+  const allDone = logs.every((l) => l.status === 'success' || l.status === 'error')
+  const label = name === '__manifest__' ? 'Manifest' : name
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      {/* Group header */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-2.5 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        <span className="text-[11px] font-bold text-gray-800 flex-1 capitalize">{label}</span>
+        {/* pass badges */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {logs.map((l) => {
+            const c = PASS_COLORS[l.pass]
+            return (
+              <span key={l.id} className={`text-[8px] font-bold px-1 py-0.5 rounded border ${c.bg} ${c.text} ${c.border}`}>
+                {c.label}
+              </span>
+            )
+          })}
+        </div>
+        {/* status dot */}
+        <span className="flex-shrink-0">
+          {hasError    ? <AlertCircle className="w-3 h-3 text-red-500" /> :
+           isStreaming ? <Loader2 className="w-3 h-3 text-blue-500 animate-spin" /> :
+           allDone     ? <CheckCircle2 className="w-3 h-3 text-green-500" /> :
+                         <Clock className="w-3 h-3 text-gray-400" />}
+        </span>
+        {/* token + time summary */}
+        <span className="text-[9px] text-gray-400 font-mono flex-shrink-0">
+          ~{(totalIn + totalOut).toLocaleString()}t
+        </span>
+        {totalMs > 0 && (
+          <span className="text-[9px] text-gray-400 flex-shrink-0">{(totalMs / 1000).toFixed(1)}s</span>
+        )}
+        {open
+          ? <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          : <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />}
+      </button>
+
+      {/* Pass rows */}
+      {open && (
+        <div className="divide-y divide-gray-100">
+          {logs.map((log) => <LogEntry key={log.id} log={log} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SectionGroupedLogs({ logs }: { logs: AICallLog[] }) {
+  // logs are newest-first; iterate reversed so groups appear in page order (top→bottom)
+  const order: string[] = []
+  const groups: Record<string, AICallLog[]> = {}
+  for (const log of [...logs].reverse()) {
+    const key = extractSection(log)
+    if (!groups[key]) { groups[key] = []; order.push(key) }
+    groups[key].push(log)
+  }
+  return (
+    <div className="space-y-1.5">
+      {order.map((key) => (
+        <SectionGroup key={key} name={key} logs={groups[key]} />
+      ))}
+    </div>
+  )
+}
+
 export function AILogPanel() {
   const {
     logs, clearLogs,
@@ -179,32 +265,6 @@ export function AILogPanel() {
         </button>
       </div>
 
-      {/* ── Active pauses ───────────────────────────────────── */}
-      {activePauses.map((p) => (
-        <div key={p.breakpointId} className="flex-shrink-0 mx-2 my-1.5 rounded-lg border border-orange-300 bg-orange-50 overflow-hidden">
-          <div className="flex items-center gap-2 px-2.5 py-1.5">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse flex-shrink-0" />
-            <span className="text-[11px] font-bold text-orange-700 flex-1">
-              Paused — {p.sectionType} after {PASS_LABEL[p.afterPass]}
-            </span>
-          </div>
-          <div className="flex gap-1.5 px-2.5 pb-2">
-            <button
-              onClick={() => resumeBreakpoint(p.breakpointId)}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold transition-colors"
-            >
-              <Play className="w-3 h-3" /> Continue
-            </button>
-            <button
-              onClick={() => abortBreakpoint(p.breakpointId)}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-semibold transition-colors"
-            >
-              <Square className="w-3 h-3" /> Abort
-            </button>
-          </div>
-        </div>
-      ))}
-
       {/* ── Pass filters ────────────────────────────────────── */}
       <div className="flex gap-1 px-2 py-1.5 border-b border-gray-100 flex-shrink-0 overflow-x-auto">
         {(['all', 'manifest', 'pass1_structure', 'pass2_visual', 'pass3_validator'] as const).map((f) => {
@@ -227,8 +287,46 @@ export function AILogPanel() {
         })}
       </div>
 
-      {/* ── Log list ────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+      {/* ── Paused queue (pinned, compact) ───────────────── */}
+      {activePauses.length > 0 && (
+        <div className="flex-shrink-0 border-b border-orange-200 bg-orange-50">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-orange-100">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wide">
+              {activePauses.length} waiting for review
+            </span>
+            <button
+              onClick={() => activePauses.forEach((p) => resumeBreakpoint(p.breakpointId))}
+              className="ml-auto text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              Continue all
+            </button>
+          </div>
+          {activePauses.map((p) => (
+            <div key={p.breakpointId} className="flex items-center gap-2 px-3 py-1.5 border-b border-orange-100 last:border-0">
+              <span className="text-[11px] font-medium text-orange-800 flex-1 truncate">
+                {p.sectionType}
+                <span className="text-orange-400 font-normal ml-1">after {PASS_LABEL[p.afterPass as AICallPass]}</span>
+              </span>
+              <button
+                onClick={() => resumeBreakpoint(p.breakpointId)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold transition-colors flex-shrink-0"
+              >
+                <Play className="w-2.5 h-2.5" /> Continue
+              </button>
+              <button
+                onClick={() => abortBreakpoint(p.breakpointId)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-[10px] font-semibold transition-colors flex-shrink-0"
+              >
+                <Square className="w-2.5 h-2.5" /> Abort
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Log list (grouped by section) ───────────────────── */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-300 text-center py-16">
             <Bot className="w-8 h-8 mb-2 opacity-40" />
@@ -236,7 +334,7 @@ export function AILogPanel() {
             <p className="text-[10px] mt-1 text-gray-300">Generate a page to see live logs</p>
           </div>
         ) : (
-          filtered.map((log) => <LogEntry key={log.id} log={log} />)
+          <SectionGroupedLogs logs={filtered} />
         )}
       </div>
     </div>

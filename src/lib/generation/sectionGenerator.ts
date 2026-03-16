@@ -145,20 +145,24 @@ export async function generateSectionStreamed(
 
     // Pass 3
     send({ type: 'status', pass: 3, section: sectionType, message: 'Validating...' })
-    const validationRaw = await provider.complete(
-      {
-        ...MODEL_CONFIG.pass3_validator,
-        system: PASS3_SYSTEM,
-        messages: [{ role: 'user', content: buildPass3User(finalHtml, manifest.pass3_auto_flags) }],
-      },
-      { pass: 'pass3_validator', label: `Pass 3 — ${sectionType} validation` }
-    )
-    const validation = safeParseJson<ValidationResult>(validationRaw)
-    if (validation) {
-      finalHtml = applyAutoFixes(finalHtml, validation)
+    try {
+      const validationRaw = await provider.complete(
+        {
+          ...MODEL_CONFIG.pass3_validator,
+          system: PASS3_SYSTEM,
+          messages: [{ role: 'user', content: buildPass3User(finalHtml, manifest.pass3_auto_flags) }],
+        },
+        { pass: 'pass3_validator', label: `Pass 3 — ${sectionType} validation` }
+      )
+      const validation = safeParseJson<ValidationResult>(validationRaw)
+      if (validation) {
+        finalHtml = applyAutoFixes(finalHtml, validation)
+      }
+    } catch (err) {
+      send({ type: 'status', pass: 3, section: sectionType, message: 'Validation skipped' })
     }
 
-    send({ type: 'complete', section: sectionType, html: finalHtml, score: validation?.score ?? 80 })
+    send({ type: 'complete', section: sectionType, html: finalHtml, score: 80 })
   } finally {
     writer.close()
   }
