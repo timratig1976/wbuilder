@@ -23,7 +23,9 @@
       "base": "dark",
       "dark_sections_allowed": true,
       "gradient_allowed": true,
-      "accent_count_max": 2
+      "accent_count_max": 2,
+      "section_bg_sequence": ["dark", "surface", "dark", "dark"],
+      "bg_animation_mode": "page-level"
     },
     "animation": {
       "budget": "moderate",
@@ -58,6 +60,9 @@
     "container": "<div class=\"max-w-6xl mx-auto px-5 md:px-8\">",
     "hero_h1": "<h1 class=\"font-sans font-extrabold text-5xl md:text-7xl tracking-tighter leading-[1.05] text-white\">",
     "gradient_text": "<span class=\"bg-gradient-to-r from-cyan-400 to-sky-400 bg-clip-text text-transparent\">",
-    "glass_card": "<div class=\"backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl shadow-xl p-6\">"
+    "glass_card": "<div class=\"backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl shadow-xl p-6\">",
+    "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold tracking-wide rounded-lg transition-all duration-200 hover:-translate-y-0.5\" style=\"background-color:var(--color-accent);color:#fff\">",
+    "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold tracking-wide rounded-lg border transition-all duration-200 hover:-translate-y-0.5\" style=\"border-color:var(--color-accent);color:var(--color-accent)\">",
+    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-200\" style=\"color:var(--color-text-muted)\">"
   }
 }

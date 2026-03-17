@@ -44,8 +44,21 @@ export function autoFix(html: string, errors: ValidationError[]): string {
 }
 
 export function applyAutoFixes(html: string, result: ValidationResult): string {
-  if (result.valid) return html
+  let fixed = html
   const fixable = result.errors.filter((e) => e.auto_fixable)
-  if (fixable.length === 0) return html
-  return autoFix(html, fixable)
+  if (fixable.length > 0) fixed = autoFix(fixed, fixable)
+  return sanitizeImagePaths(fixed)
+}
+
+// Replace any local/relative image src paths with picsum placeholders so
+// generated sections never produce 404s in the builder preview.
+let _imgCounter = 0
+export function sanitizeImagePaths(html: string): string {
+  return html.replace(
+    /(<img\b[^>]*?\bsrc\s*=\s*["'])(?!https?:\/\/)([^"']+)(["'])/gi,
+    (_match, prefix, _src, suffix) => {
+      _imgCounter++
+      return `${prefix}https://picsum.photos/800/600?random=${_imgCounter}${suffix}`
+    }
+  )
 }

@@ -195,27 +195,30 @@ export function assemblePreview(sections: Section[], manifest?: SiteManifest | n
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary:    'var(--color-primary)',
-            secondary:  'var(--color-secondary)',
-            accent:     'var(--color-accent)',
-            highlight:  'var(--color-highlight)',
-            background: 'var(--color-background)',
-            surface:    'var(--color-surface)',
-            dark:       'var(--color-dark)',
-            'brand-text': 'var(--color-text)',
-            muted:      'var(--color-text-muted)',
-          },
-          fontFamily: {
-            display: 'var(--font-heading)',
-            body:    'var(--font-body)',
+    try {
+      window.tailwind = window.tailwind || {};
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary:    'var(--color-primary)',
+              secondary:  'var(--color-secondary)',
+              accent:     'var(--color-accent)',
+              highlight:  'var(--color-highlight)',
+              background: 'var(--color-background)',
+              surface:    'var(--color-surface)',
+              dark:       'var(--color-dark)',
+              'brand-text': 'var(--color-text)',
+              muted:      'var(--color-text-muted)',
+            },
+            fontFamily: {
+              display: 'var(--font-heading)',
+              body:    'var(--font-body)',
+            },
           },
         },
-      },
-    }
+      };
+    } catch(e) {}
   <\/script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />

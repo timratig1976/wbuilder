@@ -223,14 +223,57 @@ COLOR SYSTEM (${color.base} base):
 - Dark sections: ${color.dark_sections_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
 - Gradients: ${color.gradient_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
 
+SECTION BACKGROUND RULES (critical — prevents every section looking the same):
+- Background sequence pattern: ${(color.section_bg_sequence ?? ['background', 'surface']).join(' → ')} (cycle through these tokens in order)
+  - "background" → style="background-color: var(--color-background)"
+  - "surface"     → style="background-color: var(--color-surface)"
+  - "dark"        → style="background-color: var(--color-dark)"
+  - "primary"     → style="background-color: var(--color-primary)"
+- NEVER use the same background token for two adjacent sections
+- Hero is ALWAYS "dark" background regardless of sequence
+- Navbar and footer are EXCLUDED from the sequence (they manage their own bg)
+
+BACKGROUND ANIMATION MODE: ${color.bg_animation_mode ?? 'none'}
+${color.bg_animation_mode === 'page-level'
+  ? `- Page-level mode: SVG/geometric background animations belong ONLY in the hero section
+- All other sections use FLAT solid background colors — NO SVG shapes, NO animated bg, NO mesh gradients
+- This prevents the cut-off stacking look when sections are viewed together`
+  : color.bg_animation_mode === 'per-section'
+  ? `- Per-section mode: Each dark section MAY have its own subtle background decoration
+- Keep decorations SMALL (max 20% of section area) and low opacity (≤ 0.08) so they don't dominate
+- Use <!-- [BG: geometric-shapes | opacity: 0.06] --> placeholder — resolved in Pass 2`
+  : `- No background animations — solid flat colors only`}
+
 DECORATION:
 - Glassmorphism: ${decoration.glassmorphism} | Mesh gradient: ${decoration.mesh_gradient}
 - Border glow: ${decoration.border_glow} | Geometric shapes: ${decoration.geometric_shapes}
 - Diagonal cuts: ${decoration.diagonal_cuts ?? false} | Concave sections: ${decoration.concave_sections ?? false}
 → Use <!-- [BG: geometric-shapes | opacity: 0.08] --> as placeholder (resolved in Pass 2)
 
+CTA BUTTON SYSTEM (non-negotiable — use ONLY these three variants, nothing else):
+PRIMARY CTA   → ${hp.cta_primary ?? `<a href="#" class="inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold rounded-sm transition-all duration-200 hover:-translate-y-0.5" style="background-color:var(--color-accent);color:#fff">`}
+SECONDARY CTA → ${hp.cta_secondary ?? `<a href="#" class="inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold rounded-sm border transition-all duration-200" style="border-color:var(--color-accent);color:var(--color-accent)">`}
+GHOST CTA     → ${hp.cta_ghost ?? `<a href="#" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors" style="color:var(--color-text-muted)">`}
+
+CTA USAGE RULES:
+- Use PRIMARY CTA for the single most important action on this section only
+- Use SECONDARY CTA for supporting actions (e.g. "Learn more", "See pricing")
+- Use GHOST CTA for tertiary links only (e.g. "Already a customer? Sign in")
+- NEVER mix CTA styles arbitrarily — every button on the page must match one of the three above
+- NEVER add extra border, box-shadow, shimmer, ring, glow, or gradient to a CTA unless the section is the HERO — in hero only, PRIMARY CTA may add hover shadow: hover:shadow-xl hover:shadow-accent/30
+- NEVER hardcode colors on buttons — always var(--color-accent) or var(--color-primary) via style=""
+- ALL buttons minimum h-11 (py-3 minimum) for touch targets
+
 FORBIDDEN (never use): ${dict.forbidden_patterns.join(' | ')}
 REQUIRED (always include): ${dict.required_patterns.join(' | ')}
+
+IMAGE RULES (non-negotiable):
+- NEVER use local image paths like /images/*, /kunden/*, /photos/*, /assets/*.jpg, *.png
+- NEVER reference images that don't exist on the server
+- For real photos: use https://picsum.photos/800/600?random=1 (change random= number for each image)
+- For team/person avatars: use https://i.pravatar.cc/150?img=1 (change img= 1-70)
+- For logos/icons: use inline SVG or Tailwind icon placeholders — never <img> for logos
+- ALWAYS add meaningful alt attributes to every <img>
 
 ══════════════════════════════════
 CSS CUSTOM PROPERTIES
@@ -285,10 +328,18 @@ DESIGN PATTERNS (mandatory — apply to every section):
 ${manifest.selected_patterns.map((p, i) => `${i + 1}. [${p.type}] ${p.name}: ${p.description}${p.preview_description ? ` — ${p.preview_description}` : ''}${p.implementation?.css_snippet ? `\n   CSS: ${p.implementation.css_snippet.slice(0, 200)}` : ''}${p.implementation?.placeholder ? `\n   Placeholder: ${p.implementation.placeholder}` : ''}`).join('\n')}` : ''}`
 }
 
+export interface SectionPositionContext {
+  position: number          // 0-based index in page section list
+  total: number             // total sections on page
+  prevBg?: string           // bg token used by section above (e.g. 'dark', 'surface')
+  nextBg?: string           // bg token used by section below
+}
+
 export function buildPass1User(
   sectionType: string,
   manifest: SiteManifest,
-  referenceHtml?: string | null
+  referenceHtml?: string | null,
+  posCtx?: SectionPositionContext
 ): string {
   const content = manifest.content
   const nav = manifest.navbar
@@ -307,8 +358,13 @@ Tone: ${manifest.site.tone}
 NAVBAR OUTPUT RULES (non-negotiable):
 - Outermost element MUST be <nav> — NOT <section>
 - Apply to <nav>: class="${nav.height} w-full flex items-center justify-between px-5 md:px-8"
-${nav.style === 'sticky-blur' ? '- Add to <nav>: class "sticky top-0 z-50 backdrop-blur-md" + style="background-color: color-mix(in srgb, var(--color-background) 85%, transparent)"' : ''}
-${nav.style === 'transparent-hero' ? '- Add to <nav>: class "absolute top-0 left-0 right-0 z-50" with transparent background' : ''}
+${nav.style === 'sticky-blur'
+  ? '- STICKY BLUR: add classes "sticky top-0 z-50 backdrop-blur-md" and style="background-color: color-mix(in srgb, var(--color-background) 85%, transparent)" to <nav>'
+  : nav.style === 'transparent-hero'
+  ? '- TRANSPARENT HERO: add classes "absolute top-0 left-0 right-0 z-50" to <nav>, no background color (transparent)'
+  : nav.style === 'hidden-scroll'
+  ? '- HIDDEN SCROLL: add classes "sticky top-0 z-50" to <nav>, style="background-color: var(--color-background)" — JS will hide on scroll-down, show on scroll-up'
+  : '- DEFAULT STICKY: add classes "sticky top-0 z-50" and style="background-color: var(--color-background); border-bottom: 1px solid rgba(0,0,0,0.08)" to <nav>'}
 - Logo: <a href="#"> with company name as styled text (font-bold, font-family: var(--font-heading))
 - Desktop links: <ul class="hidden md:flex items-center gap-6"> — text-sm, color: var(--color-text-muted)
 - CTA button: hidden on mobile (hidden md:flex), background: var(--color-primary), text white, rounded, px-4 py-2
@@ -335,6 +391,13 @@ FOOTER OUTPUT RULES (non-negotiable):
 - ALL colors via var(--color-*) — no hardcoded hex values`
   }
 
+  const posBlock = posCtx ? `
+PAGE POSITION (critical for background choice):
+- This is section ${posCtx.position + 1} of ${posCtx.total} on the page
+${posCtx.prevBg ? `- Section above uses background token: ${posCtx.prevBg} — MUST use a DIFFERENT token` : '- This is the first content section'}
+${posCtx.nextBg ? `- Section below uses background token: ${posCtx.nextBg} — MUST use a DIFFERENT token` : ''}
+- Pick the correct token from the bg_sequence so adjacent sections never share the same background` : ''
+
   return `Create a "${sectionType}" section for:
 Company: ${content.company_name}
 USP: ${content.company_usp}
@@ -342,6 +405,12 @@ Primary CTA: ${content.primary_cta}
 Pain Points: ${content.pain_points.join(', ')}
 Trust Signals: ${content.trust_signals.join(', ')}
 Tone: ${manifest.site.tone}
+${posBlock}
+IMAGE RULES (non-negotiable):
+- NEVER use local paths (/kunden/, /images/, /photos/, /assets/) — they don't exist
+- For photos: https://picsum.photos/800/600?random=N (use different N=1,2,3… per image)
+- For avatars/team: https://i.pravatar.cc/150?img=N (N=1–70)
+- Always add descriptive alt text to every <img>
 ${referenceHtml ? `\nREFERENCE SECTION (use as structural inspiration, not copy-paste):\n${referenceHtml.slice(0, 2000)}` : ''}`
 }
 
@@ -379,6 +448,49 @@ ${pass1Html}`
 // ═══════════════════════════════════════════════════════
 // PASS 3 — VALIDATOR PROMPT
 // ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// PAGE COHERENCE PASS — runs once after all sections done
+// Sees the full assembled page, fixes cross-section issues
+// ═══════════════════════════════════════════════════════
+
+export const COHERENCE_SYSTEM = `You are a page-level HTML coherence editor.
+You receive a full assembled page (all sections stacked) and fix cross-section problems.
+OUTPUT: Return the full corrected HTML. Raw HTML only — no markdown, no explanation, no code fences.`
+
+export function buildCoherenceUser(
+  fullPageHtml: string,
+  bgSequence: string[],
+  bgAnimationMode: string
+): string {
+  return `Fix cross-section coherence issues in this assembled page.
+
+BACKGROUND SEQUENCE RULE: sections must cycle through: ${bgSequence.join(' → ')}
+  - "background" = var(--color-background)
+  - "surface"    = var(--color-surface)
+  - "dark"       = var(--color-dark)
+  - "primary"    = var(--color-primary)
+  NEVER two adjacent sections with the same background.
+
+ANIMATION MODE: ${bgAnimationMode}
+${bgAnimationMode === 'page-level'
+  ? `- Remove ALL SVG backgrounds, mesh gradients, geometric shape decorations from every section EXCEPT the first hero section.
+- Hero keeps its background decoration. All other sections: flat solid color only.`
+  : bgAnimationMode === 'per-section'
+  ? `- Each dark section may keep ONE small background decoration (opacity ≤ 0.08, max 20% of section area).
+- Remove duplicate/redundant decorations if multiple sections have the same pattern.`
+  : `- Remove ALL SVG/animated backgrounds from every section. Flat solid colors only.`}
+
+FIXES TO APPLY:
+1. Background alternation — correct any adjacent sections sharing the same background token
+2. Background decorations — enforce the animation mode rules above
+3. CTA consistency — ensure only ONE section has the primary CTA button, others use secondary
+4. Decoration stacking — remove any background SVG/shapes that bleed or visually stack
+5. Do NOT change any text content, layout, or component structure
+
+PAGE HTML:
+${fullPageHtml.slice(0, 12000)}`
+}
 
 export const PASS3_SYSTEM = `You are an HTML/CSS validator. Respond ONLY with valid JSON. No text, no markdown.`
 

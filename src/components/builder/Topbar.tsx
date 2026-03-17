@@ -829,6 +829,11 @@ export function Topbar() {
           <Compass className="w-3.5 h-3.5" />
           Discovery
         </NavBtn>
+
+        <NavBtn href="/style-rules" variant="accent">
+          <Tag className="w-3.5 h-3.5" />
+          Style Rules
+        </NavBtn>
       </div>
 
       <Divider />

@@ -8,15 +8,16 @@ import {
 } from 'lucide-react'
 
 const PASS_COLORS: Record<AICallPass, { bg: string; text: string; border: string; label: string; dot: string }> = {
-  manifest:        { bg: 'bg-purple-50',  text: 'text-purple-700', border: 'border-purple-200', label: 'Manifest', dot: 'bg-purple-400' },
-  pass1_structure: { bg: 'bg-blue-50',    text: 'text-blue-700',   border: 'border-blue-200',   label: 'Pass 1',   dot: 'bg-blue-400'   },
-  pass2_visual:    { bg: 'bg-amber-50',   text: 'text-amber-700',  border: 'border-amber-200',  label: 'Pass 2',   dot: 'bg-amber-400'  },
-  pass3_validator: { bg: 'bg-green-50',   text: 'text-green-700',  border: 'border-green-200',  label: 'Pass 3',   dot: 'bg-green-400'  },
-  other:           { bg: 'bg-gray-50',    text: 'text-gray-600',   border: 'border-gray-200',   label: 'Call',     dot: 'bg-gray-400'   },
+  manifest:        { bg: 'bg-purple-50',  text: 'text-purple-700', border: 'border-purple-200', label: 'Manifest',  dot: 'bg-purple-400' },
+  pass1_structure: { bg: 'bg-blue-50',    text: 'text-blue-700',   border: 'border-blue-200',   label: 'Pass 1',    dot: 'bg-blue-400'   },
+  pass2_visual:    { bg: 'bg-amber-50',   text: 'text-amber-700',  border: 'border-amber-200',  label: 'Pass 2',    dot: 'bg-amber-400'  },
+  pass3_validator: { bg: 'bg-green-50',   text: 'text-green-700',  border: 'border-green-200',  label: 'Pass 3',    dot: 'bg-green-400'  },
+  coherence:       { bg: 'bg-violet-50',  text: 'text-violet-700', border: 'border-violet-200', label: 'Coherence', dot: 'bg-violet-400' },
+  other:           { bg: 'bg-gray-50',    text: 'text-gray-600',   border: 'border-gray-200',   label: 'Call',      dot: 'bg-gray-400'   },
 }
 
 const PASS_LABEL: Record<AICallPass, string> = {
-  manifest: 'Manifest', pass1_structure: 'Pass 1', pass2_visual: 'Pass 2', pass3_validator: 'Pass 3', other: 'Call',
+  manifest: 'Manifest', pass1_structure: 'Pass 1', pass2_visual: 'Pass 2', pass3_validator: 'Pass 3', coherence: 'Coherence', other: 'Call',
 }
 
 function StatusIcon({ status }: { status: AICallLog['status'] }) {
@@ -267,7 +268,7 @@ export function AILogPanel() {
 
       {/* ── Pass filters ────────────────────────────────────── */}
       <div className="flex gap-1 px-2 py-1.5 border-b border-gray-100 flex-shrink-0 overflow-x-auto">
-        {(['all', 'manifest', 'pass1_structure', 'pass2_visual', 'pass3_validator'] as const).map((f) => {
+        {(['all', 'manifest', 'pass1_structure', 'pass2_visual', 'pass3_validator', 'coherence'] as const).map((f) => {
           const count = f === 'all' ? logs.length : logs.filter((l) => l.pass === f).length
           const label = f === 'all' ? 'All' : PASS_LABEL[f as AICallPass]
           const c = f !== 'all' ? PASS_COLORS[f as AICallPass] : null

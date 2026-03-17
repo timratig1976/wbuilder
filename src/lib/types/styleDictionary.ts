@@ -17,6 +17,8 @@ export interface StyleDictionary {
     color: {
       base: string; dark_sections_allowed: boolean
       gradient_allowed: boolean; accent_count_max: number
+      section_bg_sequence?: string[]
+      bg_animation_mode?: 'none' | 'per-section' | 'page-level'
     }
     animation: {
       budget: 'none' | 'subtle' | 'moderate' | 'rich'

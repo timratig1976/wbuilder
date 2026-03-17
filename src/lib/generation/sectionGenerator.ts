@@ -2,12 +2,14 @@ import { SiteManifest, ValidationResult } from '../types/manifest'
 import { loadStyleDictionary } from '../style/styleDictionary'
 import { findBestSection } from '../sections/sectionLibrary'
 import { provider, MODEL_CONFIG } from '../ai/models'
-import { safeParseJson, applyAutoFixes } from './autoFix'
+import { safeParseJson, applyAutoFixes, sanitizeImagePaths } from './autoFix'
 import {
   buildPass1System, buildPass1User,
   buildPass2System, buildPass2User,
   buildPass3User, PASS3_SYSTEM,
+  COHERENCE_SYSTEM, buildCoherenceUser,
   MANIFEST_SYSTEM, buildManifestPrompt,
+  SectionPositionContext,
 } from './prompts'
 
 export interface GeneratedSection {
@@ -26,7 +28,8 @@ export interface GeneratedSection {
 export async function generateSection(
   sectionType: string,
   manifest: SiteManifest,
-  onProgress?: (event: { pass: number; html?: string }) => void
+  onProgress?: (event: { pass: number; html?: string }) => void,
+  posCtx?: SectionPositionContext
 ): Promise<GeneratedSection> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
   const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry)
@@ -37,7 +40,7 @@ export async function generateSection(
     {
       ...MODEL_CONFIG.pass1_structure,
       system: buildPass1System(dict, manifest),
-      messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml) }],
+      messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml, posCtx) }],
     },
     { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
   )
@@ -99,7 +102,8 @@ export async function generateSectionStreamed(
   writer: {
     write: (data: string) => void
     close: () => void
-  }
+  },
+  posCtx?: SectionPositionContext
 ): Promise<void> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
   const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry)
@@ -117,11 +121,12 @@ export async function generateSectionStreamed(
       {
         ...MODEL_CONFIG.pass1_structure,
         system: buildPass1System(dict, manifest),
-        messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml) }],
+        messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml, posCtx) }],
       },
       (chunk) => { pass1Html += chunk },
       { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
     )
+    pass1Html = sanitizeImagePaths(pass1Html)
     send({ type: 'pass1', section: sectionType, html: pass1Html })
 
     // Pass 2 — run if animation budget allows OR if there are unresolved placeholders
@@ -139,8 +144,8 @@ export async function generateSectionStreamed(
         (chunk) => { pass2Html += chunk },
         { pass: 'pass2_visual', label: `Pass 2 — ${sectionType} visual layer` }
       )
-      finalHtml = pass2Html
-      send({ type: 'pass2', section: sectionType, html: pass2Html })
+      finalHtml = sanitizeImagePaths(pass2Html)
+      send({ type: 'pass2', section: sectionType, html: finalHtml })
     }
 
     // Pass 3
@@ -169,7 +174,8 @@ export async function generateSectionStreamed(
 }
 
 // ═══════════════════════════════════════════════════════
-// generatePage — all sections for one page in parallel
+// generatePage — all sections sequentially with position
+// context, then a coherence pass over the full page
 // ═══════════════════════════════════════════════════════
 
 export async function generatePage(
@@ -180,15 +186,88 @@ export async function generatePage(
   const page = manifest.pages.find((p) => p.id === pageId)
   if (!page) throw new Error(`Page not found: ${pageId}`)
 
-  const results = await Promise.all(
-    page.sections.map((sectionType) =>
-      generateSection(sectionType, manifest).then((result) => {
-        onSectionDone?.(result)
-        return result
-      })
-    )
-  )
+  const dict = loadStyleDictionary(manifest.style_dictionary_ref)
+  const bgSeq = dict.rules.color.section_bg_sequence ?? ['background', 'surface']
+
+  // Build position-aware bg token assignments upfront
+  // Navbar/footer are excluded from the sequence
+  const contentSections = page.sections.filter((s) => s !== 'navbar' && s !== 'footer')
+  const bgAssignments: Record<number, string> = {}
+  contentSections.forEach((_, i) => {
+    bgAssignments[i] = bgSeq[i % bgSeq.length]
+  })
+
+  // Generate sections sequentially to keep position context accurate
+  const results: GeneratedSection[] = []
+  let contentIdx = 0
+  for (const sectionType of page.sections) {
+    const isContent = sectionType !== 'navbar' && sectionType !== 'footer'
+    const posCtx: SectionPositionContext | undefined = isContent ? {
+      position: contentIdx,
+      total: contentSections.length,
+      prevBg: contentIdx > 0 ? bgAssignments[contentIdx - 1] : undefined,
+      nextBg: bgAssignments[contentIdx + 1],
+    } : undefined
+
+    const result = await generateSection(sectionType, manifest, undefined, posCtx)
+    if (isContent) contentIdx++
+    onSectionDone?.(result)
+    results.push(result)
+  }
+
+  // ── Coherence pass: fix cross-section bg/decoration issues ──
+  const bgMode = dict.rules.color.bg_animation_mode ?? 'none'
+  if (bgMode !== 'none' || bgSeq.length > 1) {
+    try {
+      const fullPageHtml = results.map((r) => r.finalHtml).join('\n')
+      const correctedPage = await provider.complete(
+        {
+          ...MODEL_CONFIG.pass1_structure,
+          system: COHERENCE_SYSTEM,
+          messages: [{ role: 'user', content: buildCoherenceUser(fullPageHtml, bgSeq, bgMode) }],
+        },
+        { pass: 'coherence', label: 'Page coherence pass' }
+      )
+      // Split corrected HTML back into per-section results by matching opening tags
+      // If split fails gracefully fall back to original results
+      if (correctedPage.trim().length > 100) {
+        const splitBack = splitPageIntoSections(correctedPage, results)
+        splitBack.forEach((html, i) => { results[i] = { ...results[i], finalHtml: sanitizeImagePaths(html) } })
+      }
+    } catch {
+      // Coherence pass failure is non-fatal
+    }
+  }
+
   return results
+}
+
+// Split a full-page HTML string back into per-section chunks
+// by finding the opening tag of each section's finalHtml
+function splitPageIntoSections(fullHtml: string, origResults: GeneratedSection[]): string[] {
+  if (origResults.length === 0) return []
+  const splits: string[] = []
+  let remaining = fullHtml
+
+  for (let i = 0; i < origResults.length; i++) {
+    if (i === origResults.length - 1) {
+      splits.push(remaining)
+      break
+    }
+    // Find the opening tag of the NEXT section
+    const nextOpenTag = origResults[i + 1].finalHtml.match(/^<(\w+)/)?.[0]
+    if (!nextOpenTag) { splits.push(remaining); break }
+    const splitIdx = remaining.indexOf('\n' + nextOpenTag)
+    if (splitIdx === -1) { splits.push(remaining); break }
+    splits.push(remaining.slice(0, splitIdx))
+    remaining = remaining.slice(splitIdx + 1)
+  }
+
+  // If we got fewer splits than expected, pad with originals
+  while (splits.length < origResults.length) {
+    splits.push(origResults[splits.length].finalHtml)
+  }
+  return splits
 }
 
 // ═══════════════════════════════════════════════════════

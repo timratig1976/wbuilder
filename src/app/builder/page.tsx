@@ -355,15 +355,20 @@ export default function BuilderPage() {
 
   async function handleAddSection(type: SectionType) {
     const prompt = page.prompt || 'general purpose webpage'
+    const beforeIds = new Set(useBuilderStore.getState().page.sections.map((s) => s.id))
     addSection(type, `<!-- generating ${type}… -->`, prompt)
+    // Find the newly added section by diffing IDs — navbar inserts at [0] not at end
     const afterAddSections = useBuilderStore.getState().page.sections
-    const newSection = afterAddSections[afterAddSections.length - 1]
+    const newSection = afterAddSections.find((s) => !beforeIds.has(s.id))
+    if (!newSection) return
     setSectionGenerating(newSection.id, true)
     setSelectedSection(newSection.id)
 
     try {
+      // Always read fresh from store — avoid stale closure if manifest loaded after component mount
       const currentManifest = useBuilderStore.getState().manifest
       if (currentManifest) {
+        console.log('[v2] Using manifest pipeline for', type)
         const res = await fetch('/api/v2/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

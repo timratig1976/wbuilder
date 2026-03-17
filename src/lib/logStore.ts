@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 
-export type AICallPass = 'manifest' | 'pass1_structure' | 'pass2_visual' | 'pass3_validator' | 'other'
+export type AICallPass = 'manifest' | 'pass1_structure' | 'pass2_visual' | 'pass3_validator' | 'coherence' | 'other'
 export type AICallStatus = 'pending' | 'streaming' | 'success' | 'error'
 
 export interface AICallLog {

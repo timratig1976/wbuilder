@@ -5,11 +5,21 @@ import { useBuilderStore } from '@/lib/store'
 import { assemblePreview, buildBaseStyle, scopeScripts } from '@/lib/assembler'
 import { Loader2, Monitor, Smartphone, Plus } from 'lucide-react'
 
+function autoResizeIframe(iframe: HTMLIFrameElement) {
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!doc?.body) return
+    const h = doc.documentElement.scrollHeight || doc.body.scrollHeight
+    if (h > 0) iframe.style.height = h + 'px'
+  } catch { /* cross-origin guard */ }
+}
+
 export function Canvas() {
   const { page, manifest, selectedSectionId, previewMode, generating, setSelectedSection, setPreviewMode } =
     useBuilderStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const lastFullWriteRef = useRef<number>(0)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
 
   const sections = page.sections
   const sectionCount = sections.length
@@ -40,6 +50,15 @@ export function Canvas() {
           }
         })
       })
+      // Resize iframe to full content height so sticky positioning works
+      autoResizeIframe(iframe)
+      // Observe body size changes (e.g. lazy images, animations expanding content)
+      resizeObserverRef.current?.disconnect()
+      if (doc.body) {
+        const ro = new ResizeObserver(() => autoResizeIframe(iframe))
+        ro.observe(doc.body)
+        resizeObserverRef.current = ro
+      }
     }
     iframe.addEventListener('load', afterWrite, { once: true })
     afterWrite()
@@ -96,6 +115,9 @@ export function Canvas() {
         el.innerHTML = safe
       }
     })
+    // Re-measure after content changes so sticky still works
+    const iframeEl = iframeRef.current
+    if (iframeEl) setTimeout(() => autoResizeIframe(iframeEl), 50)
   }, [sections])
 
   // Sync selected section highlight into iframe
@@ -172,8 +194,8 @@ export function Canvas() {
           >
             <iframe
               ref={iframeRef}
-              className="w-full border-0"
-              style={{ height: '100vh', minHeight: '600px' }}
+              className="w-full border-0 block"
+              style={{ minHeight: '600px' }}
               title="Page Preview"
               sandbox="allow-scripts allow-same-origin"
             />

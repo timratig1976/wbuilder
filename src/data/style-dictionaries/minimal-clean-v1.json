@@ -23,7 +23,9 @@
       "base": "light",
       "dark_sections_allowed": false,
       "gradient_allowed": false,
-      "accent_count_max": 1
+      "accent_count_max": 1,
+      "section_bg_sequence": ["background", "surface", "background", "surface"],
+      "bg_animation_mode": "none"
     },
     "animation": {
       "budget": "none",
@@ -57,9 +59,11 @@
     "alle grids: grid-cols-1 md:grid-cols-X"
   ],
   "html_patterns": {
-    "section_wrapper": "<section class=\"relative overflow-hidden isolate py-24 md:py-32 bg-white\">",
+    "section_wrapper": "<section class=\"relative overflow-hidden isolate py-24 md:py-32\" style=\"background-color: var(--section-bg)\">",
     "container": "<div class=\"max-w-4xl mx-auto px-6\">",
     "hero_h1": "<h1 class=\"font-display font-light text-5xl md:text-7xl tracking-tight leading-none\">",
-    "cta_primary": "<a href=\"#\" class=\"inline-block px-8 py-4 bg-primary text-white text-sm font-medium rounded-sm hover:opacity-90 transition-opacity\">"
+    "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-8 py-4 text-sm font-medium rounded-sm transition-opacity hover:opacity-90\" style=\"background-color:var(--color-primary);color:#fff\">",
+    "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-8 py-4 text-sm font-medium rounded-sm border transition-opacity hover:opacity-70\" style=\"border-color:var(--color-primary);color:var(--color-primary)\">",
+    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors\" style=\"color:var(--color-text-muted)\">"
   }
 }
