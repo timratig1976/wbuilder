@@ -17,14 +17,22 @@
       "heading_size_hero": "text-[clamp(3rem,12vw,10rem)]",
       "heading_size_section": "text-5xl md:text-7xl",
       "tracking": "tracking-tight",
-      "gradient_text_allowed": false
+      "gradient_text_allowed": false,
+      "line_height_hero": "leading-none",
+      "line_height_section": "leading-none",
+      "responsive_scale": true
     },
     "color": {
       "base": "high-contrast",
       "dark_sections_allowed": true,
       "gradient_allowed": false,
       "accent_count_max": 1,
-      "section_bg_sequence": ["background", "dark", "background", "surface"],
+      "section_bg_sequence": [
+        "background",
+        "dark",
+        "background",
+        "surface"
+      ],
       "bg_animation_mode": "none"
     },
     "animation": {
@@ -32,7 +40,9 @@
       "keyframes_allowed": false,
       "scroll_driven_allowed": false,
       "text_animations_allowed": [],
-      "hover_effects_allowed": ["offset-shadow-shift"]
+      "hover_effects_allowed": [
+        "offset-shadow-shift"
+      ]
     },
     "decoration": {
       "mesh_gradient": false,

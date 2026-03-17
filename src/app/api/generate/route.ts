@@ -43,43 +43,46 @@ export async function POST(req: NextRequest) {
 
   if (styleEdit) {
     const t0 = Date.now()
-    // Extract unique class strings from HTML — send only those, not the full HTML
-    const classMatches = (currentHtml as string).match(/class="([^"]*)"/g) ?? []
-    const uniqueClasses = [...new Set(classMatches.map((m: string) => m.slice(7, -1)))]
-    const systemPrompt = `You are a Tailwind CSS expert. Given a list of class strings and a style instruction, return a JSON object mapping each class string that needs changing to its new class string. Only include entries that actually change. Return ONLY valid JSON, no explanation, no markdown.`
-    const userMessage = `INSTRUCTION: ${styleInstruction}\n\nCLASS STRINGS:\n${JSON.stringify(uniqueClasses)}`
+    const systemPrompt = `You are an expert HTML/CSS/Tailwind engineer. You will receive a section's full HTML (which may include an inline <style> block with keyframes and CSS rules) and a style instruction.
+
+Apply ONLY the changes described in the instruction. Rules:
+- You MAY edit the inline <style> block (add, remove, or modify CSS rules and @keyframes)
+- You MAY change Tailwind class strings on elements
+- You MAY add or remove inline style= attributes
+- Do NOT change any text content, headings, paragraphs, or copy
+- Do NOT add, remove, or restructure HTML elements
+- Do NOT change IDs, data attributes, or aria attributes
+- Return ONLY the modified HTML — no explanation, no markdown fences, no commentary`
+
+    const userMessage = `INSTRUCTION: ${styleInstruction}\n\nHTML:\n${currentHtml}`
+
     const res = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
-      max_tokens: 800,
+      max_tokens: 4000,
       temperature: 0.1,
-      response_format: { type: 'json_object' },
     })
-    const raw = res.choices[0]?.message?.content ?? '{}'
-    let classMap: Record<string, string> = {}
-    try { classMap = JSON.parse(raw) } catch {}
-    // Apply the class map to the HTML via string replacement
-    let html = currentHtml as string
-    for (const [oldCls, newCls] of Object.entries(classMap)) {
-      if (typeof newCls === 'string') {
-        html = html.split(`class="${oldCls}"`).join(`class="${newCls}"`)
-      }
-    }
+    let html = res.choices[0]?.message?.content?.trim() ?? (currentHtml as string)
+    // Strip accidental markdown fences
+    html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/, '').trim()
+    // Sanity check — if AI returned empty or suspiciously short, fall back
+    if (html.length < 100) html = currentHtml as string
+
     const log = {
       step: 'style-edit',
       sectionType: body.sectionType ?? 'unknown',
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       fallbackUsed: false,
       systemPrompt,
-      userMessage,
+      userMessage: userMessage.slice(0, 500),
       outputHtml: html,
       inputTokensEst: Math.ceil((systemPrompt.length + userMessage.length) / 4),
-      outputTokensEst: Math.ceil(raw.length / 4),
+      outputTokensEst: Math.ceil(html.length / 4),
       durationMs: Date.now() - t0,
-      status: Object.keys(classMap).length > 0 ? 'success' : 'no-change',
+      status: html !== currentHtml ? 'success' : 'no-change',
     }
     appendLog({
       ts: new Date().toISOString(),
@@ -87,14 +90,14 @@ export async function POST(req: NextRequest) {
       runType: 'style-edit',
       step: 'style-edit',
       sectionType: log.sectionType,
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       fallbackUsed: false,
       status: log.status,
       durationMs: log.durationMs,
       inputTokensEst: log.inputTokensEst,
       outputTokensEst: log.outputTokensEst,
       pagePrompt: pagePrompt ?? '',
-      userMessage,
+      userMessage: log.userMessage,
       systemPrompt,
       outputHtml: html.slice(0, 500),
     })

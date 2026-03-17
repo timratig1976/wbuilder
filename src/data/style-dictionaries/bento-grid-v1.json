@@ -17,7 +17,10 @@
       "heading_size_hero": "text-4xl md:text-6xl",
       "heading_size_section": "text-2xl md:text-3xl",
       "tracking": "tracking-tight",
-      "gradient_text_allowed": true
+      "gradient_text_allowed": true,
+      "line_height_hero": "leading-tight",
+      "line_height_section": "leading-snug",
+      "responsive_scale": true
     },
     "color": {
       "base": "mixed",

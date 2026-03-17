@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   Layout, Sparkles, Plus, Trash2, GripVertical,
-  Loader2, ChevronDown, ChevronUp, Wand2, Paintbrush, Zap, Globe
+  Loader2, ChevronDown, ChevronUp, Wand2, Zap, Globe
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLogStore } from '@/lib/logStore'
@@ -107,65 +107,14 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
     setSelectedSection,
     removeSection,
     reorderSections,
-    snapshotSections,
-    revertSections,
-    htmlSnapshots,
     clearManifest,
   } = useBuilderStore()
 
   const [prompt, setPrompt] = useState('')
   const [showBlocks, setShowBlocks] = useState(false)
-  const [globalStylePrompt, setGlobalStylePrompt] = useState('')
-  const [applyingGlobal, setApplyingGlobal] = useState(false)
-  const [showGlobalStyle, setShowGlobalStyle] = useState(false)
-  const [lastGlobalIds, setLastGlobalIds] = useState<string[]>([])
-  const canRevertGlobal = lastGlobalIds.length > 0 && lastGlobalIds.some(
-    (id) => htmlSnapshots[id] != null && htmlSnapshots[id] !== page.sections.find((s) => s.id === id)?.html
-  )
-
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: { distance: 5 }
   }))
-
-  function handleRevertGlobal() {
-    revertSections(lastGlobalIds)
-    toast.success('Global style reverted')
-  }
-
-  async function handleGlobalStyle() {
-    if (!globalStylePrompt.trim() || page.sections.length === 0) return
-    const ids = page.sections.map((s) => s.id)
-    snapshotSections(ids)
-    setLastGlobalIds(ids)
-    setApplyingGlobal(true)
-    toast.info(`Applying to ${page.sections.length} sections…`)
-    let successCount = 0
-    await Promise.all(
-      page.sections.map(async (section) => {
-        try {
-          const res = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              styleEdit: true,
-              currentHtml: section.html,
-              styleInstruction: globalStylePrompt.trim(),
-              sectionType: section.type,
-            }),
-          })
-          if (!res.ok) return
-          const data = await res.json()
-          if (data.html?.trim()) {
-            useBuilderStore.getState().updateSectionHtml(section.id, data.html)
-            successCount++
-          }
-        } catch {}
-      })
-    )
-    toast.success(`Global style applied to ${successCount} sections!`)
-    setGlobalStylePrompt('')
-    setApplyingGlobal(false)
-  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -291,53 +240,6 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
           </DndContext>
         )}
       </ScrollArea>
-
-      {/* Global Style */}
-      <div className="px-4 py-3 border-t border-gray-200 bg-white">
-        <button
-          onClick={() => setShowGlobalStyle(!showGlobalStyle)}
-          className="flex items-center justify-between w-full text-sm font-semibold text-gray-600 hover:text-pink-600 transition-colors"
-        >
-          <span className="flex items-center gap-1.5">
-            <Paintbrush className="w-4 h-4" /> Global Style
-          </span>
-          {showGlobalStyle ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-        {showGlobalStyle && (
-          <div className="mt-2 space-y-2">
-            <p className="text-xs text-gray-400 leading-relaxed">Apply a style change to <strong>all sections</strong> at once.</p>
-            <Textarea
-              value={globalStylePrompt}
-              onChange={(e) => setGlobalStylePrompt(e.target.value)}
-              placeholder={`e.g. "use a dark theme throughout", "change all fonts to serif", "make all buttons rounded and green", "add more whitespace"`}
-              className="text-sm resize-none h-20 bg-white"
-            />
-            <div className="flex gap-2">
-              <Button
-                onClick={handleGlobalStyle}
-                disabled={applyingGlobal || !globalStylePrompt.trim() || page.sections.length === 0}
-                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white text-sm"
-              >
-                {applyingGlobal ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Applying…</>
-                ) : (
-                  <><Paintbrush className="w-4 h-4 mr-2" /> Apply to Whole Page</>
-                )}
-              </Button>
-              {canRevertGlobal && (
-                <Button
-                  onClick={handleRevertGlobal}
-                  variant="outline"
-                  className="text-xs px-3 border-orange-300 text-orange-600 hover:bg-orange-50"
-                  title="Undo last global style change"
-                >
-                  Undo
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Add Block */}
       <div className="px-4 py-3 border-t border-gray-200 bg-white">

@@ -314,10 +314,21 @@ LAYOUT RULES (non-negotiable):
 - Overlaps allowed: ${layout.overlaps_allowed} | Full bleed: ${layout.full_bleed_allowed} | Negative margins: ${layout.negative_margin_allowed}
 
 TYPOGRAPHY RULES:
-- Heading size hero: ${typography.heading_size_hero}
-- Heading size section: ${typography.heading_size_section}
+- Hero H1 size: ${typography.heading_size_hero}
+- Section H2 size: ${typography.heading_size_section}
+- Hero line-height: ${typography.line_height_hero ?? 'leading-tight'} — ALWAYS apply this to every H1 element
+- Section line-height: ${typography.line_height_section ?? 'leading-snug'} — ALWAYS apply this to every H2/H3 element
 - Tracking: ${typography.tracking}
 - Gradient text: ${typography.gradient_text_allowed ? 'ALLOWED — use bg-gradient-to-r bg-clip-text text-transparent' : 'NOT ALLOWED'}
+
+RESPONSIVE FONT SCALING (${typography.responsive_scale !== false ? 'ENABLED — required' : 'DISABLED'}):
+${typography.responsive_scale !== false ? `- ALL headings MUST use responsive size classes — never a single fixed size
+- Hero H1 pattern:  text-3xl sm:text-4xl md:text-5xl lg:${typography.heading_size_hero.replace(/^text-/, 'text-')} ${typography.line_height_hero ?? 'leading-tight'} ${typography.heading_weight ? `font-[${typography.heading_weight}]` : ''}
+- Section H2 pattern: text-2xl sm:text-3xl md:${typography.heading_size_section} ${typography.line_height_section ?? 'leading-snug'}
+- Sub-headings H3: text-xl sm:text-2xl leading-snug
+- Body text: text-sm sm:text-base leading-relaxed
+- NEVER use text-5xl or larger without a smaller mobile prefix (e.g. text-3xl sm:text-5xl)
+- Line-height is CRITICAL on large headings — ${typography.line_height_hero ?? 'leading-tight'} prevents excessive gaps between wrapped lines` : `- Use fixed heading sizes as specified above`}
 
 COLOR SYSTEM (${color.base} base):
 - Dark sections: ${color.dark_sections_allowed ? 'ALLOWED' : 'NOT ALLOWED'}

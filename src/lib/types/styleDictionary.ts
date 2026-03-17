@@ -26,6 +26,9 @@ export interface StyleDictionary {
       heading_font: string; heading_weight: string
       heading_size_hero: string; heading_size_section: string
       tracking: string; gradient_text_allowed: boolean
+      line_height_hero?: string       // e.g. 'leading-tight' or '1.1'
+      line_height_section?: string    // e.g. 'leading-snug' or '1.2'
+      responsive_scale?: boolean      // if true: shrink headings on mobile
     }
     color: {
       base: string; dark_sections_allowed: boolean

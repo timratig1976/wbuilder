@@ -516,6 +516,28 @@ export default function StyleRulesPage() {
               />
             </FieldRow>
 
+            <FieldRow label="Hero line-height" description="e.g. leading-tight, leading-none, 1.05">
+              <input
+                value={rules.typography.line_height_hero ?? 'leading-tight'}
+                onChange={(e) => update(['rules', 'typography', 'line_height_hero'], e.target.value)}
+                placeholder="leading-tight"
+                className="w-full text-xs font-mono border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              />
+            </FieldRow>
+
+            <FieldRow label="Section line-height" description="e.g. leading-snug, leading-tight, 1.2">
+              <input
+                value={rules.typography.line_height_section ?? 'leading-snug'}
+                onChange={(e) => update(['rules', 'typography', 'line_height_section'], e.target.value)}
+                placeholder="leading-snug"
+                className="w-full text-xs font-mono border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              />
+            </FieldRow>
+
+            <FieldRow label="Responsive scale" description="Shrink headings on mobile (sm: prefix classes)">
+              <Toggle value={rules.typography.responsive_scale ?? true} onChange={(v) => update(['rules', 'typography', 'responsive_scale'], v)} />
+            </FieldRow>
+
             <FieldRow label="Tracking" description="Letter-spacing Tailwind class">
               <input
                 value={rules.typography.tracking}

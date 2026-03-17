@@ -18,21 +18,31 @@
       "heading_size_hero": "text-6xl md:text-8xl",
       "heading_size_section": "text-5xl md:text-6xl",
       "tracking": "tracking-tight",
-      "gradient_text_allowed": false
+      "gradient_text_allowed": false,
+      "line_height_hero": "leading-none",
+      "line_height_section": "leading-tight",
+      "responsive_scale": true
     },
     "color": {
       "base": "light",
       "dark_sections_allowed": false,
       "gradient_allowed": false,
       "accent_count_max": 1,
-      "section_bg_sequence": ["background", "surface", "background", "surface"],
+      "section_bg_sequence": [
+        "background",
+        "surface",
+        "background",
+        "surface"
+      ],
       "bg_animation_mode": "none"
     },
     "animation": {
       "budget": "subtle",
       "keyframes_allowed": false,
       "scroll_driven_allowed": false,
-      "hover_effects_allowed": ["opacity"]
+      "hover_effects_allowed": [
+        "opacity"
+      ]
     },
     "decoration": {
       "mesh_gradient": false,
