@@ -30,18 +30,19 @@ export async function generateSection(
   sectionType: string,
   manifest: SiteManifest,
   onProgress?: (event: { pass: number; html?: string }) => void,
-  posCtx?: SectionPositionContext
+  posCtx?: SectionPositionContext,
+  pageIndex?: number
 ): Promise<GeneratedSection> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
-  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry)
+  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone)
 
   // ── Pass 1: Structure ─────────────────────────────────
   onProgress?.({ pass: 1 })
   const pass1Html = await provider.complete(
     {
       ...MODEL_CONFIG.pass1_structure,
-      system: buildPass1System(dict, manifest),
-      messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml, posCtx) }],
+      system: buildPass1System(dict, manifest, sectionType),
+      messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml, posCtx, pageIndex) }],
     },
     { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
   )
@@ -97,6 +98,12 @@ export async function generateSection(
 // generateSection with streaming (for SSE route)
 // ═══════════════════════════════════════════════════════
 
+interface RegenOptions {
+  customPrompt?: string
+  existingHtml?: string
+  mode?: 'full' | 'content-edit'
+}
+
 export async function generateSectionStreamed(
   sectionType: string,
   manifest: SiteManifest,
@@ -104,10 +111,13 @@ export async function generateSectionStreamed(
     write: (data: string) => void
     close: () => void
   },
-  posCtx?: SectionPositionContext
+  posCtx?: SectionPositionContext,
+  pageIndex?: number,
+  regenOptions?: RegenOptions
 ): Promise<void> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
-  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry)
+  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone)
+  const { customPrompt, existingHtml, mode = 'full' } = regenOptions ?? {}
 
   const send = (event: object) => writer.write(`data: ${JSON.stringify(event)}\n\n`)
 
@@ -115,14 +125,42 @@ export async function generateSectionStreamed(
   provider.onLog = (entry) => send({ type: 'log', entry })
 
   try {
+    // ── content-edit mode: surgical text-only rewrite, no layout changes ──────
+    if (mode === 'content-edit' && existingHtml && customPrompt) {
+      send({ type: 'status', pass: 1, section: sectionType, message: 'Applying content edit...' })
+      let editedHtml = ''
+      await provider.stream(
+        {
+          ...MODEL_CONFIG.pass1_structure,
+          model: 'gpt-4.1-mini',
+          max_tokens: 8000,
+          temperature: 0.2,
+          system: `You are a precise HTML editor. You receive existing section HTML and a change instruction.
+Your job: apply ONLY the requested change. Never touch classes, layout, colors, or structure.
+Only modify text content inside elements (h1, h2, h3, p, a, span, li, button text).
+Output ONLY the full modified HTML. No markdown, no explanation.`,
+          messages: [{ role: 'user', content: `CHANGE INSTRUCTION: ${customPrompt}\n\nEXISTING HTML:\n${existingHtml}` }],
+        },
+        (chunk) => { editedHtml += chunk },
+        { pass: 'pass1_structure', label: `Content edit — ${sectionType}` }
+      )
+      editedHtml = sanitizeImagePaths(editedHtml)
+      send({ type: 'pass1', section: sectionType, html: editedHtml })
+      send({ type: 'complete', section: sectionType, html: editedHtml, score: 90 })
+      return
+    }
+
     // Pass 1
     send({ type: 'status', pass: 1, section: sectionType, message: 'Generating structure...' })
     let pass1Html = ''
+    // Append customPrompt as additional instruction when provided
+    const pass1UserMsg = buildPass1User(sectionType, manifest, referenceHtml, posCtx, pageIndex)
+      + (customPrompt ? `\n\nADDITIONAL INSTRUCTION (apply this on top of the standard rules): ${customPrompt}` : '')
     await provider.stream(
       {
         ...MODEL_CONFIG.pass1_structure,
-        system: buildPass1System(dict, manifest),
-        messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml, posCtx) }],
+        system: buildPass1System(dict, manifest, sectionType),
+        messages: [{ role: 'user', content: pass1UserMsg }],
       },
       (chunk) => { pass1Html += chunk },
       { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
@@ -301,6 +339,9 @@ export async function generateManifest(input: Parameters<typeof buildManifestPro
       'grid-cols-X without grid-cols-1 — no mobile-first grid',
     ]
   }
+
+  // Ensure visual_tone is set — AI may omit it for older prompts
+  if (!parsed.visual_tone) parsed.visual_tone = input.visual_tone as SiteManifest['visual_tone'] ?? 'confident'
 
   // Auto-populate design_spec from the resolved style dictionary
   // This makes component-level design rules first-class manifest data

@@ -54,11 +54,27 @@ export function applyAutoFixes(html: string, result: ValidationResult): string {
 // generated sections never produce 404s in the builder preview.
 let _imgCounter = 0
 export function sanitizeImagePaths(html: string): string {
+  return sanitizeSvgPoints(
+    html.replace(
+      /(<img\b[^>]*?\bsrc\s*=\s*["'])(?!https?:\/\/)([^"']+)(["'])/gi,
+      (_match, prefix, _src, suffix) => {
+        _imgCounter++
+        return `${prefix}https://picsum.photos/800/600?random=${_imgCounter}${suffix}`
+      }
+    )
+  )
+}
+
+// SVG <polygon> and <polyline> points must be unitless numbers.
+// The AI sometimes generates percentage values like "98%,8% 99%,2%".
+// Strip the % signs so the browser doesn't throw a parse error.
+export function sanitizeSvgPoints(html: string): string {
   return html.replace(
-    /(<img\b[^>]*?\bsrc\s*=\s*["'])(?!https?:\/\/)([^"']+)(["'])/gi,
-    (_match, prefix, _src, suffix) => {
-      _imgCounter++
-      return `${prefix}https://picsum.photos/800/600?random=${_imgCounter}${suffix}`
+    /(<(?:polygon|polyline)\b[^>]*?\bpoints\s*=\s*["'])([^"']+)(["'])/gi,
+    (_match, prefix, points, suffix) => {
+      // Remove all % characters from the points value
+      const fixed = points.replace(/%/g, '')
+      return `${prefix}${fixed}${suffix}`
     }
   )
 }

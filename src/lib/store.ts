@@ -71,13 +71,15 @@ export interface HistoryEntry {
   label: string
   timestamp: number
   snapshots: Record<string, string>
+  manifest?: import('./types/manifest').SiteManifest | null
+  sectionOrder?: Array<{ pageId: string; sectionIds: string[] }>
 }
 
 interface BuilderStore {
   project: Project
   savedProjects: Project[]
   selectedSectionId: string | null
-  previewMode: 'desktop' | 'mobile'
+  previewMode: 'desktop' | 'tablet' | 'mobile'
   generating: boolean
   htmlSnapshots: Record<string, string>
   history: HistoryEntry[]
@@ -97,12 +99,13 @@ interface BuilderStore {
   setBrand: (brand: Partial<BrandStyle>) => void
   setActivePageId: (id: string) => void
   addPage: (title: string, slug: string) => void
+  duplicatePage: (id: string) => void
   deletePage: (id: string) => void
   setPageTitle: (title: string) => void
   setPageSlug: (slug: string) => void
   setPagePrompt: (prompt: string) => void
   setSelectedSection: (id: string | null) => void
-  setPreviewMode: (mode: 'desktop' | 'mobile') => void
+  setPreviewMode: (mode: 'desktop' | 'tablet' | 'mobile') => void
   setGenerating: (v: boolean) => void
 
   addSection: (type: SectionType, html: string, prompt: string) => void
@@ -114,6 +117,7 @@ interface BuilderStore {
   revertAllSections: () => void
   pushHistory: (label: string) => void
   revertToHistory: (id: string) => void
+  forkFromHistory: (id: string, newLabel: string) => void
   clearHistory: () => void
   syncColorsAcrossPages: (oldColors: Record<string, string>, newColors: Record<string, string>) => void
   injectCssTokens: () => void
@@ -350,6 +354,27 @@ export const useBuilderStore = create<BuilderStore>()(
           return { ...withPage({ project }), selectedSectionId: null }
         }),
 
+        duplicatePage: (id) => set((s) => {
+          const src = s.project.pages.find((p) => p.id === id)
+          if (!src) return s
+          const copy: Page = {
+            ...src,
+            id: nanoid(),
+            title: src.title + ' (copy)',
+            slug: src.slug + '-copy',
+            sections: src.sections.map((sec) => ({ ...sec, id: nanoid() })),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          }
+          const project = {
+            ...s.project,
+            pages: [...s.project.pages, copy],
+            activePageId: copy.id,
+            updatedAt: Date.now(),
+          }
+          return { ...withPage({ project }), selectedSectionId: null }
+        }),
+
         deletePage: (id) => set((s) => {
           if (s.project.pages.length <= 1) return s
           const remaining = s.project.pages.filter((p) => p.id !== id)
@@ -458,11 +483,20 @@ export const useBuilderStore = create<BuilderStore>()(
         pushHistory: (label) =>
           set((s) => {
             const snap: Record<string, string> = {}
+            const sectionOrder: Array<{ pageId: string; sectionIds: string[] }> = []
             s.project.pages.forEach((p) => {
               p.sections.forEach((sec) => { snap[sec.id] = sec.html })
+              sectionOrder.push({ pageId: p.id, sectionIds: p.sections.map((sec) => sec.id) })
             })
-            const entry: HistoryEntry = { id: nanoid(), label, timestamp: Date.now(), snapshots: snap }
-            return { history: [entry, ...s.history].slice(0, 20) }
+            const entry: HistoryEntry = {
+              id: nanoid(),
+              label,
+              timestamp: Date.now(),
+              snapshots: snap,
+              manifest: s.manifest ? JSON.parse(JSON.stringify(s.manifest)) : null,
+              sectionOrder,
+            }
+            return { history: [entry, ...s.history].slice(0, 30) }
           }),
 
         revertToHistory: (id) =>
@@ -479,7 +513,32 @@ export const useBuilderStore = create<BuilderStore>()(
                 ),
               })),
             }
-            return withPage({ project })
+            const next = withPage({ project })
+            return entry.manifest ? { ...next, manifest: entry.manifest } : next
+          }),
+
+        forkFromHistory: (id, newLabel) =>
+          set((s) => {
+            const entry = s.history.find((h) => h.id === id)
+            if (!entry) return s
+            const forkedProject: Project = {
+              ...s.project,
+              id: nanoid(),
+              name: newLabel,
+              updatedAt: Date.now(),
+              pages: s.project.pages.map((p) => ({
+                ...p,
+                sections: p.sections.map((sec) =>
+                  entry.snapshots[sec.id] != null ? { ...sec, html: entry.snapshots[sec.id] } : sec
+                ),
+              })),
+            }
+            const savedProjects = [forkedProject, ...s.savedProjects]
+            return {
+              project: forkedProject,
+              savedProjects,
+              manifest: entry.manifest ?? s.manifest,
+            }
           }),
 
         clearHistory: () => set({ history: [] }),

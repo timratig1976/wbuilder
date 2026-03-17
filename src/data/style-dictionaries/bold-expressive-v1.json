@@ -24,15 +24,31 @@
       "dark_sections_allowed": true,
       "gradient_allowed": true,
       "accent_count_max": 3,
-      "section_bg_sequence": ["dark", "background", "dark", "surface"],
-      "bg_animation_mode": "per-section"
+      "section_bg_sequence": [
+        "dark",
+        "background",
+        "dark",
+        "surface"
+      ],
+      "bg_animation_mode": "focus-sections"
     },
     "animation": {
       "budget": "rich",
       "keyframes_allowed": true,
       "scroll_driven_allowed": true,
-      "text_animations_allowed": ["word-cycle", "fade-up", "scramble", "typewriter"],
-      "hover_effects_allowed": ["scale", "glow", "reveal", "magnetic", "tilt"]
+      "text_animations_allowed": [
+        "word-cycle",
+        "fade-up",
+        "scramble",
+        "typewriter"
+      ],
+      "hover_effects_allowed": [
+        "scale",
+        "glow",
+        "reveal",
+        "magnetic",
+        "tilt"
+      ]
     },
     "decoration": {
       "mesh_gradient": true,

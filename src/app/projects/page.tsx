@@ -2,9 +2,11 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useState } from 'react'
 import { useBuilderStore } from '@/lib/store'
 import { PageTopbar } from '@/components/ui/PageTopbar'
-import { Zap, Plus, ArrowRight, Layers, Clock, Globe, Trash2, Sparkles, Database, Wand2, ArrowLeft } from 'lucide-react'
+import { Zap, Plus, ArrowRight, Layers, Clock, Globe, Trash2, Sparkles, Database, Wand2, ArrowLeft, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts
@@ -18,10 +20,36 @@ function timeAgo(ts: number): string {
 
 export default function ProjectsPage() {
   const router = useRouter()
-  const { savedProjects, loadProject, deleteProject, newProject } = useBuilderStore()
+  const { savedProjects, loadProject, deleteProject, newProject, setManifest } = useBuilderStore()
+  const [loadingId, setLoadingId] = useState<string | null>(null)
 
-  function handleOpen(id: string) {
-    loadProject(id)
+  async function handleOpen(id: string) {
+    setLoadingId(id)
+    try {
+      // Always fetch fresh from server to get latest manifest + sections
+      const res = await fetch(`/api/projects/${id}`)
+      if (res.ok) {
+        const serverProject = await res.json()
+        // Inject into savedProjects so loadProject can find it
+        useBuilderStore.setState((s) => ({
+          savedProjects: [serverProject, ...s.savedProjects.filter((p) => p.id !== serverProject.id)],
+        }))
+        useBuilderStore.getState().loadProject(serverProject.id)
+        if (serverProject.manifest) setManifest(serverProject.manifest)
+      } else {
+        // Server not available or project not found — fall back to localStorage
+        const localProject = useBuilderStore.getState().savedProjects.find((p) => p.id === id)
+        loadProject(id)
+        if (localProject?.manifest) setManifest(localProject.manifest)
+      }
+    } catch {
+      // Network error — fall back to localStorage version
+      const localProject = useBuilderStore.getState().savedProjects.find((p) => p.id === id)
+      loadProject(id)
+      if (localProject?.manifest) setManifest(localProject.manifest)
+    } finally {
+      setLoadingId(null)
+    }
     router.push('/builder')
   }
 
@@ -77,12 +105,18 @@ export default function ProjectsPage() {
               const pageCount = proj.pages.length
               const sectionCount = proj.pages.reduce((s, p) => s + p.sections.length, 0)
               const paradigm = proj.manifest?.style_paradigm
+              const isLoading = loadingId === proj.id
               return (
                 <div
                   key={proj.id}
-                  onClick={() => handleOpen(proj.id)}
-                  className="group relative bg-white border border-gray-200 hover:border-indigo-300 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-md"
+                  onClick={() => !isLoading && handleOpen(proj.id)}
+                  className={`group relative bg-white border rounded-2xl p-5 transition-all ${isLoading ? 'border-indigo-300 shadow-md cursor-wait opacity-70' : 'border-gray-200 hover:border-indigo-300 cursor-pointer hover:shadow-md'}`}
                 >
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-2xl z-10">
+                      <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                    </div>
+                  )}
                   {paradigm && (
                     <span className="absolute top-4 right-4 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
                       {paradigm}

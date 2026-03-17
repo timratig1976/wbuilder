@@ -1,18 +1,49 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useBuilderStore, BrandStyle } from '@/lib/store'
 import { useLogStore } from '@/lib/logStore'
+import { useProjectAutoSave } from '@/hooks/useProjectAutoSave'
 import { Button } from '@/components/ui/button'
-import { Download, Trash2, Loader2, Zap, Save, FilePlus, X, BarChart2, Plus, Globe, Paintbrush, DollarSign, Sparkles, Compass, FileJson, ChevronDown, ChevronUp, Pencil, Library, Tag } from 'lucide-react'
+import { Download, Trash2, Loader2, Zap, Save, FilePlus, X, BarChart2, Plus, Globe, Paintbrush, DollarSign, Sparkles, Compass, FileJson, ChevronDown, ChevronUp, Pencil, Library, Tag, History, Layers } from 'lucide-react'
+import { VersionHistory } from './VersionHistory'
 import { toast } from 'sonner'
 
 function SitemapDrawer({ onClose }: { onClose: () => void }) {
-  const { project, savedProjects, setActivePageId, addPage, deletePage, setProjectName, loadProject, deleteProject } = useBuilderStore()
+  const { project, savedProjects, setActivePageId, addPage, deletePage, setProjectName, loadProject, deleteProject, setManifest } = useBuilderStore()
   const [newTitle, setNewTitle] = useState('')
   const [adding, setAdding] = useState(false)
   const [showSaved, setShowSaved] = useState(false)
+  const [loadingSnapshotId, setLoadingSnapshotId] = useState<string | null>(null)
+
+  async function handleLoadSnapshot(id: string, name: string) {
+    if (!confirm(`Load "${name}"? Current unsaved work will be lost.`)) return
+    setLoadingSnapshotId(id)
+    try {
+      const res = await fetch(`/api/projects/${id}`)
+      if (res.ok) {
+        const serverProject = await res.json()
+        useBuilderStore.setState((s) => ({
+          savedProjects: [serverProject, ...s.savedProjects.filter((p) => p.id !== serverProject.id)],
+        }))
+        useBuilderStore.getState().loadProject(serverProject.id)
+        if (serverProject.manifest) setManifest(serverProject.manifest)
+      } else {
+        const localProject = useBuilderStore.getState().savedProjects.find((p) => p.id === id)
+        loadProject(id)
+        if (localProject?.manifest) setManifest(localProject.manifest)
+      }
+    } catch {
+      const localProject = useBuilderStore.getState().savedProjects.find((p) => p.id === id)
+      loadProject(id)
+      if (localProject?.manifest) setManifest(localProject.manifest)
+    } finally {
+      setLoadingSnapshotId(null)
+    }
+    onClose()
+    toast.success(`Loaded "${name}"`)
+  }
 
   function fmt(ts: number) {
     return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -126,9 +157,11 @@ function SitemapDrawer({ onClose }: { onClose: () => void }) {
                   </div>
                   <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                     <button
-                      onClick={() => { if (confirm(`Load "${sp.name}"? Current unsaved work will be lost.`)) { loadProject(sp.id); onClose(); toast.success(`Loaded "${sp.name}"`) } }}
-                      className="text-[11px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-0.5 rounded font-medium"
+                      onClick={() => handleLoadSnapshot(sp.id, sp.name)}
+                      disabled={loadingSnapshotId === sp.id}
+                      className="text-[11px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-0.5 rounded font-medium disabled:opacity-50 flex items-center gap-1"
                     >
+                      {loadingSnapshotId === sp.id && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
                       Load
                     </button>
                     <button
@@ -418,7 +451,7 @@ function ManifestDrawer({ onClose }: { onClose: () => void }) {
             <span className="font-semibold text-gray-900 text-sm">Site Manifest</span>
             <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-semibold">{manifest.version ?? '2.0'}</span>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">{manifest.content?.company_name} · {manifest.style_paradigm}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{manifest.content?.company_name} · {manifest.style_paradigm}{manifest.visual_tone ? ` · ${manifest.visual_tone}` : ''}</p>
         </div>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-4 h-4" /></button>
       </div>
@@ -459,6 +492,10 @@ function ManifestDrawer({ onClose }: { onClose: () => void }) {
               <Row k="Language" v={manifest.site?.language} />
               <Row k="Adjectives" v={manifest.site?.adjectives?.join(', ')} />
               <Row k="CTA Goal" v={manifest.site?.primary_cta_goal} />
+            </Section>
+            <Section label="Visual Style">
+              <Row k="Paradigm" v={manifest.style_paradigm} />
+              <Row k="Visual Tone" v={manifest.visual_tone ?? 'confident'} />
             </Section>
             <Section label="Content">
               <Row k="USP" v={manifest.content?.company_usp} />
@@ -807,10 +844,13 @@ function Divider() {
 export function Topbar() {
   const { page, project, manifest, generating, clearSections, saveProject, newProject, setManifest } = useBuilderStore()
   const { logs } = useLogStore()
+  const { isDirty } = useProjectAutoSave()
+  const { history } = useBuilderStore()
   const [showSitemap, setShowSitemap] = useState(false)
   const [showManifest, setShowManifest] = useState(false)
   const [showPatterns, setShowPatterns] = useState(false)
   const [showOpen, setShowOpen] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   const runCostEur = calcRunCost(logs)
   const hasBrand = Object.values(project.brand).some((v) => v.trim() !== '')
@@ -837,7 +877,22 @@ export function Topbar() {
     }
   }
 
-  function handleSave() { saveProject(); toast.success(`"${project.name}" saved`) }
+  const handleSave = useCallback(() => {
+    saveProject()
+    toast.success(`“${project.name}” saved`)
+  }, [saveProject, project.name])
+
+  // Cmd+S / Ctrl+S keyboard shortcut
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        handleSave()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleSave])
   function handleNew() {
     if (!confirm('Start a new project? Unsaved changes will be lost.')) return
     newProject(); toast.success('New project started')
@@ -992,6 +1047,16 @@ export function Topbar() {
           <Tag className="w-3.5 h-3.5" />
           Style Rules
         </NavBtn>
+
+        <NavBtn href="/style-dictionaries" variant="accent">
+          <Layers className="w-3.5 h-3.5" />
+          Dictionaries
+        </NavBtn>
+
+        <NavBtn href="/vary" variant="accent">
+          <Sparkles className="w-3.5 h-3.5" />
+          Vary
+        </NavBtn>
       </div>
 
       <Divider />
@@ -1011,10 +1076,42 @@ export function Topbar() {
           {showOpen && <OpenProjectDrawer onClose={() => setShowOpen(false)} />}
         </div>
 
-        <NavBtn onClick={handleSave}>
+        <button
+          onClick={handleSave}
+          title="Save project (Cmd+S)"
+          className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
+            isDirty
+              ? 'bg-emerald-500 hover:bg-emerald-600 text-white ring-2 ring-emerald-300 ring-offset-1'
+              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+          }`}
+        >
           <Save className="w-3.5 h-3.5" />
           Save
-        </NavBtn>
+          {isDirty && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-pulse border border-white" />
+          )}
+        </button>
+
+        <div className="relative">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            title="Version History"
+            className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              showHistory
+                ? 'bg-indigo-100 text-indigo-700'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            History
+            {history.length > 0 && (
+              <span className="bg-indigo-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                {history.length > 9 ? '9+' : history.length}
+              </span>
+            )}
+          </button>
+          {showHistory && <VersionHistory onClose={() => setShowHistory(false)} />}
+        </div>
 
         <NavBtn href="/logs">
           <BarChart2 className="w-3.5 h-3.5" />

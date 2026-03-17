@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useBuilderStore } from '@/lib/store'
 import type { BriefingData, PresetSlot } from '@/lib/store'
 import type { PageDef } from '@/lib/types/briefing'
-import { SiteManifest, StyleParadigm } from '@/lib/types/manifest'
+import { SiteManifest, StyleParadigm, VisualTone } from '@/lib/types/manifest'
 import { toast } from 'sonner'
 import { PageTopbar } from '@/components/ui/PageTopbar'
 import {
@@ -57,6 +57,14 @@ const ADJECTIVE_OPTIONS = [
   'vertrauenswürdig', 'modern', 'professionell', 'innovativ',
   'persönlich', 'ambitioniert', 'minimalistisch', 'premium',
   'dynamisch', 'nachhaltig', 'digital', 'lokal',
+]
+
+const VISUAL_TONE_OPTIONS: { value: VisualTone; label: string; desc: string; emoji: string; tags: string[] }[] = [
+  { value: 'whisper',    label: 'Whisper',    emoji: '🌫',  desc: 'Subtle, quiet, generous whitespace — minimal decoration',          tags: ['Luxury', 'Spa', 'Wellness', 'Law'] },
+  { value: 'editorial', label: 'Editorial',  emoji: '📰',  desc: 'Structured, formal, serif-forward — typography as decoration',       tags: ['Publishing', 'Agency', 'Finance', 'Consulting'] },
+  { value: 'confident', label: 'Confident',  emoji: '✦',   desc: 'Balanced & clear — moderate animation, clean hierarchy',             tags: ['SaaS', 'B2B', 'Tech', 'Healthcare'] },
+  { value: 'expressive',label: 'Expressive', emoji: '⚡',  desc: 'Bold headings, rich animation, high decoration density',             tags: ['Creative', 'Startup', 'Events', 'Fashion'] },
+  { value: 'electric',  label: 'Electric',   emoji: '🔥',  desc: 'Maximum energy — full animation, vibrant, loud and proud',           tags: ['Gaming', 'Music', 'Sports', 'Entertainment'] },
 ]
 
 const ANIMATION_OPTIONS = [
@@ -733,6 +741,36 @@ function Step3({ data, onChange }: { data: BriefingData; onChange: (d: Partial<B
       </div>
 
       <div>
+        <label className="text-xs font-semibold text-gray-600 block mb-2">Visueller Ton *</label>
+        <p className="text-xs text-gray-400 mb-3">Unabhängig vom Paradigma — steuert Intensität, Whitespace und Dekorationsdichte.</p>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+          {VISUAL_TONE_OPTIONS.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => onChange({ visual_tone: t.value })}
+              className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all ${
+                data.visual_tone === t.value
+                  ? 'bg-indigo-50 border-indigo-400 shadow-sm'
+                  : 'bg-white border-gray-200 hover:border-indigo-200 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xl leading-none">{t.emoji}</span>
+                {data.visual_tone === t.value && <Check className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />}
+              </div>
+              <p className={`text-sm font-semibold leading-tight ${data.visual_tone === t.value ? 'text-indigo-900' : 'text-gray-800'}`}>{t.label}</p>
+              <p className="text-[10px] text-gray-400 leading-tight">{t.desc}</p>
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                {t.tags.slice(0, 2).map((tag) => (
+                  <span key={tag} className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">{tag}</span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <label className="text-xs font-semibold text-gray-600 block mb-2">Animations-Budget</label>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {ANIMATION_OPTIONS.map((a) => (
@@ -968,6 +1006,7 @@ const defaultData: BriefingData = {
   personas: [],
   pain_points: [],
   style_paradigm: 'bold-expressive',
+  visual_tone: 'confident' as VisualTone,
   animation_budget: 'moderate',
   navbar_style: 'sticky-blur',
   navbar_mobile: 'hamburger-dropdown',
@@ -1005,6 +1044,7 @@ const DEFAULT_PRESETS: Record<PresetSlot, { label: string; data: BriefingData }>
         'Finanzierung unklar — man weiß nicht wo man anfangen soll',
       ],
       style_paradigm: 'bold-expressive',
+      visual_tone: 'confident' as VisualTone,
       animation_budget: 'subtle',
       navbar_style: 'sticky-blur',
       navbar_mobile: 'hamburger-dropdown',
@@ -1041,6 +1081,7 @@ const DEFAULT_PRESETS: Record<PresetSlot, { label: string; data: BriefingData }>
         'Prozess dauert Monate und kostet intern zu viel Attention',
       ],
       style_paradigm: 'tech-dark',
+      visual_tone: 'expressive' as VisualTone,
       animation_budget: 'subtle',
       navbar_style: 'sticky-blur',
       navbar_mobile: 'hamburger-dropdown',
@@ -1077,6 +1118,7 @@ const DEFAULT_PRESETS: Record<PresetSlot, { label: string; data: BriefingData }>
         'Röstdatum unklar — Kaffee liegt Wochen im Lager bevor er ankommt',
       ],
       style_paradigm: 'bold-expressive',
+      visual_tone: 'editorial' as VisualTone,
       animation_budget: 'subtle',
       navbar_style: 'transparent-hero',
       navbar_mobile: 'hamburger-overlay',
@@ -1204,7 +1246,7 @@ function BriefingPresets({
   )
 }
 
-export default function BriefingPage() {
+function BriefingPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isEditMode = searchParams.get('edit') === '1'
@@ -1227,6 +1269,7 @@ export default function BriefingPage() {
       personas:         manifest.content?.personas ?? defaultData.personas,
       pain_points:      manifest.content?.pain_points ?? defaultData.pain_points,
       style_paradigm:   manifest.style_paradigm ?? defaultData.style_paradigm,
+      visual_tone:      (manifest.visual_tone ?? defaultData.visual_tone) as VisualTone,
       animation_budget: defaultData.animation_budget,
       navbar_style:     (manifest.navbar?.style as BriefingData['navbar_style']) ?? defaultData.navbar_style,
       navbar_mobile:    (manifest.navbar?.mobile_menu as BriefingData['navbar_mobile']) ?? defaultData.navbar_mobile,
@@ -1286,6 +1329,7 @@ export default function BriefingPage() {
           personas:         data.personas,
           pain_points:      data.pain_points,
           style_paradigm:   data.style_paradigm,
+          visual_tone:      data.visual_tone,
           animation_budget: data.animation_budget,
           navbar_style:     data.navbar_style,
           navbar_mobile:    data.navbar_mobile,
@@ -1398,5 +1442,13 @@ export default function BriefingPage() {
       </div>
       </div>
     </div>
+  )
+}
+
+export default function BriefingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center"><div className="text-gray-400 text-sm">Loading…</div></div>}>
+      <BriefingPageInner />
+    </Suspense>
   )
 }

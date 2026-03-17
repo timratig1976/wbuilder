@@ -1,4 +1,4 @@
-import { StyleParadigm } from './manifest'
+import { StyleParadigm, VisualTone } from './manifest'
 
 export interface PageDef {
   title: string
@@ -17,6 +17,7 @@ export interface BriefingData {
   personas: string[]
   pain_points: string[]
   style_paradigm: StyleParadigm
+  visual_tone: VisualTone
   animation_budget: 'none' | 'subtle' | 'moderate' | 'rich'
   navbar_style: 'sticky-blur' | 'static' | 'transparent-hero' | 'hidden-scroll'
   navbar_mobile: 'hamburger-dropdown' | 'hamburger-overlay' | 'hamburger-sidebar' | 'logo-cta-only'

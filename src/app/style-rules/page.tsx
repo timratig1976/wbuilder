@@ -334,7 +334,7 @@ export default function StyleRulesPage() {
 
             <FieldRow label="BG animation mode" description="Where decorative SVG/mesh backgrounds are placed">
               <div className="flex gap-2 flex-wrap">
-                {(['none', 'per-section', 'page-level'] as const).map((opt) => (
+                {(['none', 'per-section', 'focus-sections'] as const).map((opt) => (
                   <button
                     key={opt}
                     onClick={() => update(['rules', 'color', 'bg_animation_mode'], opt)}
@@ -345,16 +345,54 @@ export default function StyleRulesPage() {
                     }`}
                   >
                     {opt === 'none' && 'None — flat colors only'}
-                    {opt === 'per-section' && 'Per-section — subtle per dark section'}
-                    {opt === 'page-level' && 'Page-level — hero only, rest flat'}
+                    {opt === 'per-section' && 'Per-section — every dark section'}
+                    {opt === 'focus-sections' && 'Focus sections — pick which ones'}
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-400 mt-2">
-                {rules.color.bg_animation_mode === 'page-level' && 'SVG/mesh only in hero. Prevents stacked cut-off look.'}
-                {rules.color.bg_animation_mode === 'per-section' && 'Each dark section gets a small decoration. Keep opacity ≤ 0.08.'}
+              <p className="text-[10px] text-gray-400 mt-1">
+                {rules.color.bg_animation_mode === 'focus-sections' && 'Animation only on selected section types. All others stay flat.'}
+                {rules.color.bg_animation_mode === 'per-section' && 'Each dark section gets a subtle decoration. Keep opacity ≤ 0.08.'}
                 {(!rules.color.bg_animation_mode || rules.color.bg_animation_mode === 'none') && 'No animated backgrounds anywhere.'}
               </p>
+
+              {/* Focus sections picker — shown only when focus-sections mode is active */}
+              {rules.color.bg_animation_mode === 'focus-sections' && (() => {
+                const ALL_SECTION_TYPES = ['hero', 'features', 'stats', 'testimonials', 'pricing', 'faq', 'cta', 'contact', 'about', 'team', 'process', 'logos', 'gallery', 'blog', 'footer']
+                const current: string[] = rules.color.bg_animation_focus_sections ?? ['hero']
+                const toggle = (s: string) => {
+                  const next = current.includes(s) ? current.filter(x => x !== s) : [...current, s]
+                  update(['rules', 'color', 'bg_animation_focus_sections'], next)
+                }
+                return (
+                  <div className="mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <p className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide mb-2">Animated section types</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ALL_SECTION_TYPES.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => toggle(s)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
+                            current.includes(s)
+                              ? 'bg-indigo-600 border-indigo-600 text-white'
+                              : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300'
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                    {current.length === 0 && (
+                      <p className="text-[10px] text-amber-500 mt-2">⚠ No sections selected — same as &quot;None&quot;</p>
+                    )}
+                    {current.length > 0 && (
+                      <p className="text-[10px] text-indigo-400 mt-2">
+                        Animation applies to: <strong>{current.join(', ')}</strong>
+                      </p>
+                    )}
+                  </div>
+                )
+              })()}
             </FieldRow>
 
             <FieldRow label="Color base" description="Light, dark, or mixed page">

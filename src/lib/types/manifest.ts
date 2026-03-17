@@ -2,6 +2,13 @@ export type StyleParadigm =
   | 'minimal-clean' | 'tech-dark' | 'bold-expressive'
   | 'luxury-editorial' | 'bento-grid' | 'brutalist'
 
+export type VisualTone =
+  | 'whisper'      // subtle, quiet, lots of whitespace, minimal decoration
+  | 'editorial'    // structured, serif-forward, formal, low animation
+  | 'confident'    // clear, moderate animation, balanced decoration
+  | 'expressive'   // bold headings, rich animation, heavy decoration
+  | 'electric'     // maximum energy, full animation, vibrant, loud
+
 export type AnimationBudget = 'none' | 'subtle' | 'moderate' | 'rich'
 
 export type SectionTransition =
@@ -55,7 +62,7 @@ export interface DesignSpec {
   }
   animation: {
     budget: 'none' | 'subtle' | 'moderate' | 'rich'
-    bg_mode: 'none' | 'per-section' | 'page-level'
+    bg_mode: 'none' | 'per-section' | 'focus-sections'
     section_bg_sequence: string[]
   }
 }
@@ -68,6 +75,7 @@ export interface SiteManifest {
   }
   design_tokens: DesignTokens
   style_paradigm: StyleParadigm
+  visual_tone: VisualTone
   style_dictionary_ref: string
   style_source: { type: string; url?: string; confidence?: number }
   navbar: {

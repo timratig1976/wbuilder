@@ -205,6 +205,10 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
             <span>{manifest.pages?.length ?? 1} page{(manifest.pages?.length ?? 1) !== 1 ? 's' : ''}</span>
             <span className="text-indigo-300">·</span>
             <span>{manifest.style_paradigm}</span>
+            {manifest.visual_tone && <>
+              <span className="text-indigo-300">·</span>
+              <span>{manifest.visual_tone}</span>
+            </>}
             <span className="text-indigo-300">·</span>
             <span>tokens ✓</span>
           </div>

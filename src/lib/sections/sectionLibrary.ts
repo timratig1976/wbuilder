@@ -19,27 +19,57 @@ function loadIndex(): SectionMeta[] {
   }
 }
 
+function scoreSection(
+  meta: SectionMeta,
+  paradigm: StyleParadigm,
+  industry: string | undefined,
+  tone: string | undefined,
+  sectionKeywords: string[]
+): number {
+  let score = meta.quality_score ?? 0
+
+  // Paradigm exact match — highest weight
+  if (meta.paradigm === paradigm) score += 10
+
+  // Industry match
+  if (industry && meta.industries?.includes(industry)) score += 4
+  // Partial industry match (e.g. 'saas' in 'saas-startup')
+  if (industry && meta.industries?.some(ind => ind.includes(industry) || industry.includes(ind))) score += 2
+
+  // Tone match
+  if (tone && meta.tone?.includes(tone)) score += 3
+
+  // Tag overlap with section type keywords
+  const tagOverlap = sectionKeywords.filter(kw =>
+    meta.tags?.some(tag => tag.toLowerCase().includes(kw) || kw.includes(tag.toLowerCase()))
+  ).length
+  score += tagOverlap * 2
+
+  return score
+}
+
 export function findBestSection(
   sectionType: string,
   paradigm: StyleParadigm,
-  industry?: string
+  industry?: string,
+  tone?: string
 ): string | null {
   const index = loadIndex()
   if (index.length === 0) return null
 
-  const candidates = index
-    .filter((s) => s.type === sectionType && s.paradigm === paradigm)
-    .sort((a, b) => {
-      let scoreA = a.quality_score
-      let scoreB = b.quality_score
-      if (industry) {
-        if (a.industries.includes(industry)) scoreA += 2
-        if (b.industries.includes(industry)) scoreB += 2
-      }
-      return scoreB - scoreA
-    })
+  const sectionKeywords = sectionType.toLowerCase().replace(/-/g, ' ').split(/\s+/)
 
-  const best = candidates[0]
+  // Filter to matching section type first
+  const typed = index.filter((s) => s.type === sectionType)
+  if (typed.length === 0) return null
+
+  // Score all candidates, sort descending
+  const ranked = typed
+    .map(meta => ({ meta, score: scoreSection(meta, paradigm, industry, tone, sectionKeywords) }))
+    .sort((a, b) => b.score - a.score)
+
+  // Pick best — if top score is very low (no real match), still use it
+  const best = ranked[0]?.meta
   if (!best) return null
 
   try {

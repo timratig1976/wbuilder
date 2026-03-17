@@ -21,31 +21,42 @@ interface TailwindExample {
 
 const CATEGORIES: Record<string, string[]> = {
   hero: [
-    'https://tailwindui.com/components/marketing/sections/heroes',
+    'https://flowbite.com/blocks/marketing/hero/',
+    'https://merakiui.com/components/marketing/hero',
   ],
   features: [
-    'https://tailwindui.com/components/marketing/sections/feature-sections',
+    'https://flowbite.com/blocks/marketing/feature/',
+    'https://merakiui.com/components/marketing/feature-sections',
   ],
   pricing: [
-    'https://tailwindui.com/components/marketing/sections/pricing',
+    'https://flowbite.com/blocks/marketing/pricing/',
+    'https://merakiui.com/components/marketing/pricing',
   ],
   testimonials: [
-    'https://tailwindui.com/components/marketing/sections/testimonials',
+    'https://flowbite.com/blocks/marketing/testimonial/',
+    'https://merakiui.com/components/marketing/testimonials',
   ],
   stats: [
-    'https://tailwindui.com/components/marketing/sections/stats-sections',
+    'https://flowbite.com/blocks/marketing/social-proof/',
   ],
   cta: [
-    'https://tailwindui.com/components/marketing/sections/cta-sections',
+    'https://flowbite.com/blocks/marketing/cta/',
+    'https://merakiui.com/components/marketing/cta',
   ],
   faq: [
-    'https://tailwindui.com/components/marketing/sections/faq-sections',
+    'https://flowbite.com/blocks/marketing/faq/',
   ],
   footer: [
-    'https://tailwindui.com/components/marketing/sections/footers',
+    'https://flowbite.com/blocks/marketing/footer/',
+    'https://merakiui.com/components/marketing/footer-sections',
   ],
   navbar: [
-    'https://tailwindui.com/components/marketing/elements/headers',
+    'https://flowbite.com/blocks/marketing/navbar/',
+    'https://merakiui.com/components/application-ui/navbars',
+  ],
+  bento: [
+    'https://tailwindcomponents.com/search?q=bento',
+    'https://flowbite.com/blocks/marketing/feature/',
   ],
 }
 

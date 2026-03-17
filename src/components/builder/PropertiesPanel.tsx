@@ -11,7 +11,7 @@ import { RefreshCw, Code2, X, Loader2, Wand2, Paintbrush } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface PropertiesPanelProps {
-  onRegenerate: (sectionId: string, customPrompt: string) => void
+  onRegenerate: (sectionId: string, customPrompt: string, mode: 'full' | 'content-edit') => void
 }
 
 export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
@@ -20,6 +20,7 @@ export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
   const canRevert = section && htmlSnapshots[section.id] != null && htmlSnapshots[section.id] !== section.html
 
   const [regenPrompt, setRegenPrompt] = useState('')
+  const [regenMode, setRegenMode] = useState<'full' | 'content-edit'>('full')
   const [editingHtml, setEditingHtml] = useState(false)
   const [htmlValue, setHtmlValue] = useState('')
   const [aiStylePrompt, setAiStylePrompt] = useState('')
@@ -111,24 +112,50 @@ export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
               <Wand2 className="w-4 h-4 text-indigo-500" />
               <span className="text-sm font-semibold text-gray-700">Regenerate Section</span>
             </div>
+            {/* Mode toggle */}
+            <div className="flex gap-1 mb-2 bg-gray-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setRegenMode('full')}
+                className={`flex-1 text-xs px-2 py-1.5 rounded-md font-medium transition-colors ${
+                  regenMode === 'full' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Full rebuild
+              </button>
+              <button
+                onClick={() => setRegenMode('content-edit')}
+                className={`flex-1 text-xs px-2 py-1.5 rounded-md font-medium transition-colors ${
+                  regenMode === 'content-edit' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Text only
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mb-2">
+              {regenMode === 'full'
+                ? 'Rebuilds the entire section from scratch — layout, content, and style.'
+                : 'Only changes text (headlines, copy, CTAs). Layout and styling stay exactly the same.'}
+            </p>
             <Textarea
               value={regenPrompt}
               onChange={(e) => setRegenPrompt(e.target.value)}
-              placeholder={`Describe changes for this ${section.type}... e.g. "make it darker", "add a video background", "use a 2-column layout"`}
-              className="text-sm resize-none h-24 bg-white"
+              placeholder={regenMode === 'full'
+                ? `e.g. "make it darker", "use a 2-column layout", "add a video background"`
+                : `e.g. "change headline to: We hire faster", "make CTA say Book a Demo"`}
+              className="text-sm resize-none h-20 bg-white"
             />
             <Button
               onClick={() => {
-                onRegenerate(section.id, regenPrompt)
+                onRegenerate(section.id, regenPrompt, regenMode)
                 setRegenPrompt('')
               }}
-              disabled={section.generating}
+              disabled={section.generating || (regenMode === 'content-edit' && !regenPrompt.trim())}
               className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
             >
               {section.generating ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Regenerating...</>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {regenMode === 'content-edit' ? 'Editing...' : 'Regenerating...'}</>
               ) : (
-                <><RefreshCw className="w-4 h-4 mr-2" /> Regenerate</>
+                <><RefreshCw className="w-4 h-4 mr-2" /> {regenMode === 'content-edit' ? 'Apply Text Change' : 'Regenerate'}</>
               )}
             </Button>
           </div>

@@ -6,9 +6,13 @@ export const runtime = 'nodejs'
 export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
-  const { manifest, sectionType } = await req.json() as {
+  const { manifest, sectionType, pageIndex, customPrompt, existingHtml, mode } = await req.json() as {
     manifest: SiteManifest
     sectionType: string
+    pageIndex?: number
+    customPrompt?: string
+    existingHtml?: string
+    mode?: 'full' | 'content-edit'
   }
 
   if (!manifest || !sectionType) {
@@ -29,7 +33,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Run generation async — do not await here so we return the stream immediately
-  generateSectionStreamed(sectionType, manifest, sseWriter).catch((err) => {
+  generateSectionStreamed(
+    sectionType, manifest, sseWriter, undefined, pageIndex,
+    { customPrompt, existingHtml, mode: mode ?? 'full' }
+  ).catch((err) => {
     sseWriter.write(`data: ${JSON.stringify({ type: 'error', message: String(err) })}\n\n`)
     sseWriter.close()
   })

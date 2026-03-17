@@ -63,14 +63,16 @@ export class OpenAIProvider implements AIProvider {
     const t0 = Date.now()
     let full = ''
     try {
+      const isO = params.model.startsWith('o4') || params.model.startsWith('o3') || params.model.startsWith('o1')
       const stream = await client.chat.completions.create({
         model: params.model,
         messages: [
           ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
           ...params.messages,
         ],
-        max_tokens: params.max_tokens,
-        temperature: params.temperature,
+        ...(isO
+          ? { max_completion_tokens: params.max_tokens }
+          : { max_tokens: params.max_tokens, temperature: params.temperature }),
         stream: true,
       })
       for await (const chunk of stream) {

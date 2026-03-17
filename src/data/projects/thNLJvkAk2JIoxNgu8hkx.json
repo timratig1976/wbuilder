@@ -1,0 +1,272 @@
+{
+  "id": "thNLJvkAk2JIoxNgu8hkx",
+  "name": "Baumanagement Nordost GmbH",
+  "brand": {
+    "primaryColor": "#2C3E2D",
+    "secondaryColor": "#F6F6F6",
+    "accentColor": "#C8963E",
+    "highlightColor": "#FFD580",
+    "backgroundColor": "#F8FAF9",
+    "surfaceColor": "#FFFFFF",
+    "darkColor": "#1A251A",
+    "textColor": "#232323",
+    "textMutedColor": "#6B7280",
+    "fontFamily": "'Montserrat', sans-serif",
+    "fontBody": "'Inter', sans-serif",
+    "headingWeight": "700",
+    "borderRadius": "",
+    "tone": "professional",
+    "extraNotes": ""
+  },
+  "pages": [
+    {
+      "id": "2Z677aAbGbdvQEqqxXN04",
+      "title": "Startseite",
+      "slug": "/",
+      "prompt": "",
+      "sections": [],
+      "createdAt": 1773670808558,
+      "updatedAt": 1773670808558
+    },
+    {
+      "id": "Q3psfP5C7JtNHdkdlgLgB",
+      "title": "Projekte",
+      "slug": "/projekte",
+      "prompt": "",
+      "sections": [],
+      "createdAt": 1773670808558,
+      "updatedAt": 1773670808558
+    },
+    {
+      "id": "djHKhd0DXuANhHz3D94SG",
+      "title": "Kontakt",
+      "slug": "/kontakt",
+      "prompt": "",
+      "sections": [],
+      "createdAt": 1773670808558,
+      "updatedAt": 1773670808558
+    }
+  ],
+  "activePageId": "2Z677aAbGbdvQEqqxXN04",
+  "manifest": {
+    "id": "e2e6f7d2-1c3a-4a7d-9b3d-8b6c9f0e2a1b",
+    "version": "2.0",
+    "site": {
+      "name": "Baumanagement Nordost GmbH",
+      "language": "de",
+      "industry": "construction",
+      "tone": "professional",
+      "adjectives": [
+        "vertrauenswürdig",
+        "persönlich",
+        "regional"
+      ],
+      "primary_cta_goal": "Interessenten zu einem persönlichen Beratungsgespräch führen, um individuelle Bauprojekte sicher und transparent zu planen."
+    },
+    "design_tokens": {
+      "colors": {
+        "primary": "#2C3E2D",
+        "secondary": "#F6F6F6",
+        "accent": "#C8963E",
+        "highlight": "#FFD580",
+        "background": "#F8FAF9",
+        "surface": "#FFFFFF",
+        "dark": "#1A251A",
+        "text": "#232323",
+        "text_muted": "#6B7280",
+        "_source": "user-brand"
+      },
+      "typography": {
+        "font_heading": "'Montserrat', sans-serif",
+        "font_body": "'Inter', sans-serif",
+        "heading_weight": "700",
+        "tracking_heading": "-0.025em",
+        "line_height_heading": "1.05",
+        "_source": "ai-generated"
+      },
+      "type_scale": {
+        "hero_h1": "text-4xl md:text-5xl lg:text-[5rem]",
+        "section_h2": "text-3xl md:text-[3rem]",
+        "card_h3": "text-sm md:text-base",
+        "body": "text-sm md:text-base",
+        "eyebrow": "text-[.68rem] font-semibold tracking-[.14em] uppercase",
+        "cta_button": "text-xs md:text-sm font-semibold tracking-wide"
+      },
+      "spacing": {
+        "section_padding_light": "py-16 md:py-24",
+        "section_padding_heavy": "py-14 md:py-24",
+        "container_max": "max-w-7xl mx-auto",
+        "container_padding": "px-5 md:px-8"
+      }
+    },
+    "style_paradigm": "bold-expressive",
+    "style_dictionary_ref": "bold-expressive-v1",
+    "style_source": {
+      "type": "ai-generated"
+    },
+    "navbar": {
+      "style": "sticky-blur",
+      "scroll_threshold_px": 40,
+      "height": "h-16",
+      "layout_desktop": "logo-left nav-center cta-right",
+      "mobile_menu": "hamburger-dropdown",
+      "cta_button": true,
+      "cta_label": "Beratungsgespräch vereinbaren",
+      "links": [
+        "Leistungen",
+        "Ablauf",
+        "Kontakt"
+      ]
+    },
+    "section_stacking_rules": {},
+    "pages": [
+      {
+        "id": "page-0",
+        "slug": "/",
+        "title": "Startseite",
+        "sections": [
+          "hero",
+          "pain-points",
+          "services",
+          "process",
+          "stats",
+          "testimonials",
+          "cta",
+          "footer"
+        ],
+        "meta_description": "Baumanagement Nordost GmbH: Ihr vertrauenswürdiger Partner für Bauprojekte in Norddeutschland. Persönliche Beratung, transparente Abläufe und regionale Expertise für Familien, Kapitalanleger und Senioren. Jetzt Beratungsgespräch vereinbaren!"
+      },
+      {
+        "id": "page-1",
+        "slug": "/projekte",
+        "title": "Projekte",
+        "sections": [
+          "hero",
+          "features",
+          "cta",
+          "footer"
+        ],
+        "meta_description": ""
+      },
+      {
+        "id": "page-2",
+        "slug": "/kontakt",
+        "title": "Kontakt",
+        "sections": [
+          "hero",
+          "cta",
+          "footer"
+        ],
+        "meta_description": ""
+      }
+    ],
+    "content": {
+      "company_name": "Baumanagement Nordost GmbH",
+      "company_usp": "Wir begleiten Ihr Bauprojekt persönlich, vertrauenswürdig und regional – mit einem festen Ansprechpartner, klaren Abläufen und voller Transparenz bei Kosten und Fortschritt.",
+      "primary_cta": "Beratungsgespräch vereinbaren",
+      "secondary_cta": "Mehr erfahren",
+      "personas": [
+        "Familie mit Kindern die endlich Planungssicherheit beim Hausbau will — kein Budget-Chaos, ein Ansprechpartner",
+        "Kapitalanleger 45+ der sichere Mietobjekte in Norddeutschland sucht ohne Makler",
+        "Rentnerpaar das barrierefreien Neubau in Stadtlage sucht — weg vom großen Haus"
+      ],
+      "pain_points": [
+        "Bauprojekte laufen aus dem Ruder — Kosten und Zeit nicht kontrollierbar",
+        "Kein Überblick über den Baufortschritt, immer der Falsche am Telefon",
+        "Schöne Renderings aber keine echten Referenzen bei anderen Anbietern",
+        "Finanzierung unklar — man weiß nicht wo man anfangen soll"
+      ],
+      "trust_signals": [
+        "Langjährige Erfahrung und zahlreiche erfolgreich abgeschlossene Bauprojekte in Norddeutschland",
+        "Fester persönlicher Ansprechpartner während des gesamten Projekts",
+        "Transparente Kostenaufstellung und regelmäßige Updates zum Baufortschritt",
+        "Zertifizierte Partner und geprüfte Bauqualität – keine versteckten Maklergebühren"
+      ]
+    },
+    "pass1_prompt_rules": {
+      "rules": [
+        "NO inline style for layout — Tailwind classes only",
+        "inline style ONLY for CSS Custom Properties: style='color: var(--color-accent)'",
+        "Every grid: grid-cols-1 base, then md:/lg: breakpoints",
+        "Split sections: primary content DOM-first (H1+CTA mobile top)",
+        "order-X ONLY for secondary content — NEVER on H1, H2, forms",
+        "min-h-screen ALWAYS as md:min-h-screen",
+        "All interactive elements: min h-11 mobile (py-3 minimum)",
+        "Use CSS Custom Properties: var(--color-primary), var(--color-accent)",
+        "Animation placeholders: <!-- [ANIM: word-cycle | words: [...]] -->",
+        "Background placeholders: <!-- [BG: geometric-shapes | opacity: 0.1] -->",
+        "NO @keyframes in Pass 1 — that is Pass 2 responsibility",
+        "Output ONLY HTML, no markdown, no comments outside HTML"
+      ]
+    },
+    "pass3_auto_flags": [
+      "style='' contains grid/flex/column/height — layout in inline style",
+      "grid-cols-X without preceding grid-cols-1 — no mobile-first grid",
+      "min-h-screen without md: prefix — full height on mobile too",
+      "order-1 on element containing h1/h2/form — primary content reordered",
+      "button or a without py-3+ — touch target too small",
+      "@keyframes outside prefers-reduced-motion guard — unprotected animation",
+      "img without alt attribute — missing alt text",
+      "icon-only button without aria-label — missing ARIA"
+    ],
+    "generated_at": "2026-03-16T14:19:44.949Z",
+    "_decision_log": {
+      "paradigm": "bold-expressive — user selected",
+      "colors": "user brand colors — not overwritten",
+      "navbar": "sticky-blur — user selected in briefing wizard"
+    },
+    "selected_patterns": [
+      {
+        "id": "builtin-diagonal-transition-001",
+        "name": "Diagonaler Abschnitt",
+        "description": "Section endet diagonal durch clip-path — dynamischer Schnitt der Energie und Bewegung vermittelt.",
+        "type": "section-transition",
+        "preview_description": "Diagonaler Schnitt am unteren Rand — vermittelt Dynamik und Vorwärtsbewegung",
+        "implementation": {
+          "css_snippet": ".section-diagonal{clip-path:polygon(0 0,100% 0,100% 88%,0 100%);}",
+          "placeholder": "<!-- [TRANSITION: diagonal-bottom | angle=8deg] -->",
+          "style_dict_key": "rules.layout.section_transition",
+          "style_dict_val": "diagonal-bottom"
+        }
+      },
+      {
+        "id": "builtin-glassmorphism-001",
+        "name": "Glassmorphism Karten",
+        "description": "Karten mit backdrop-filter blur und semitransparentem weißen oder farbigen Hintergrund — scheinen zu schweben. Bekannt von Apple, Linear, Vercel.",
+        "type": "card-style",
+        "preview_description": "Karten scheinen zu schweben — Blur-Effekt auf Hintergrund",
+        "implementation": {
+          "html_snippet": "<div class=\"backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl shadow-xl p-6\">",
+          "style_dict_key": "rules.decoration.glassmorphism",
+          "style_dict_val": true
+        }
+      },
+      {
+        "id": "builtin-gradient-text-001",
+        "name": "Gradient Text Effekt",
+        "description": "Headline-Text bekommt einen Farbverlauf — Wort oder Phrase leuchtet in Accent-Farben. Bekannt von Vercel, Framer, Linear.",
+        "type": "typography",
+        "preview_description": "Schlüsselwort in der Headline leuchtet im Farbverlauf — Accent-Farbe als Highlight",
+        "implementation": {
+          "html_snippet": "<span class=\"bg-gradient-to-r from-accent to-highlight bg-clip-text\" style=\"-webkit-text-fill-color:transparent\">",
+          "style_dict_key": "rules.typography.gradient_text_allowed",
+          "style_dict_val": true
+        }
+      },
+      {
+        "id": "builtin-svg-background-001",
+        "name": "SVG Hintergrundgrafik",
+        "description": "Dekorative SVG-Illustration oder -Muster als Hintergrundelement — gibt Sections eine unverwechselbare visuelle Identität ohne Fotos.",
+        "type": "background-treatment",
+        "preview_description": "Dekorative SVG im Hintergrund — visuell unverwechselbar ohne Fotos",
+        "implementation": {
+          "placeholder": "<!-- [BG: svg-illustration | type=abstract | opacity=0.08] -->",
+          "style_dict_key": "rules.decoration.geometric_shapes",
+          "style_dict_val": true
+        }
+      }
+    ]
+  },
+  "createdAt": 1773670808558,
+  "updatedAt": 1773742165296
+}

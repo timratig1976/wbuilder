@@ -1,1 +1,194 @@
-[]
+[
+  {
+    "id": "UdovRQfQHrboBOhpQZy3K",
+    "status": "pending",
+    "observation": "The use of a Bento Grid layout is visually striking, offering a modular and organized approach that enhances both aesthetics and functionality.",
+    "category": "layout",
+    "confidence": 0.9,
+    "css_hint": "has_bento_grid: true",
+    "reusability": "paradigm-specific",
+    "seen_count": 2,
+    "seen_on": [
+      "https://www.webdesign-journal.de/bento-grid/"
+    ],
+    "first_seen": "2026-03-17T10:31:11.367Z",
+    "last_seen": "2026-03-17T10:33:44.692Z",
+    "source_url": "https://www.webdesign-journal.de/bento-grid/"
+  },
+  {
+    "id": "GgifrI4_YsNMEaFdy-Nt2",
+    "status": "pending",
+    "observation": "The transparent navigation bar allows for a seamless integration with the hero section, creating a clean and modern look.",
+    "category": "layout",
+    "confidence": 0.8,
+    "css_hint": "has_transparent_nav: true",
+    "reusability": "universal",
+    "seen_count": 1,
+    "seen_on": [
+      "https://www.webdesign-journal.de/bento-grid/"
+    ],
+    "first_seen": "2026-03-17T10:31:11.368Z",
+    "last_seen": "2026-03-17T10:31:11.368Z",
+    "source_url": "https://www.webdesign-journal.de/bento-grid/"
+  },
+  {
+    "id": "2MyQfn0LgTRZc_Ghmst6r",
+    "status": "pending",
+    "observation": "The use of clip-path in the design adds a unique geometric element, providing a dynamic visual interest.",
+    "category": "decoration",
+    "confidence": 0.75,
+    "css_hint": "has_clip_path: true",
+    "reusability": "universal",
+    "seen_count": 2,
+    "seen_on": [
+      "https://www.webdesign-journal.de/bento-grid/"
+    ],
+    "first_seen": "2026-03-17T10:31:11.368Z",
+    "last_seen": "2026-03-17T10:33:44.692Z",
+    "source_url": "https://www.webdesign-journal.de/bento-grid/"
+  },
+  {
+    "id": "r5RffpYg66Uw0hXye-b26",
+    "status": "pending",
+    "observation": "Site uses clip-path to create non-rectangular section shapes — unusual geometric transitions",
+    "category": "layout",
+    "confidence": 0.65,
+    "css_hint": "has_clip_path",
+    "reusability": "paradigm-specific",
+    "seen_count": 2,
+    "seen_on": [
+      "https://www.webdesign-journal.de/bento-grid/"
+    ],
+    "first_seen": "2026-03-17T10:31:11.372Z",
+    "last_seen": "2026-03-17T10:33:44.693Z",
+    "source_url": "https://www.webdesign-journal.de/bento-grid/"
+  },
+  {
+    "id": "3AgPwwfUt4PrGZkotcIW9",
+    "status": "pending",
+    "observation": "Site uses a bento-style asymmetric grid with 3+ columns — Apple-inspired card layout",
+    "category": "layout",
+    "confidence": 0.65,
+    "css_hint": "has_bento_grid",
+    "reusability": "universal",
+    "seen_count": 2,
+    "seen_on": [
+      "https://www.webdesign-journal.de/bento-grid/"
+    ],
+    "first_seen": "2026-03-17T10:31:11.372Z",
+    "last_seen": "2026-03-17T10:33:44.693Z",
+    "source_url": "https://www.webdesign-journal.de/bento-grid/"
+  },
+  {
+    "id": "V5CQQIfj2d-87TTKPFnXK",
+    "status": "pending",
+    "observation": "The transparent navigation bar maintains a clean and modern aesthetic, allowing the content to take center stage.",
+    "category": "layout",
+    "confidence": 0.75,
+    "css_hint": "has_transparent_nav: true",
+    "reusability": "universal",
+    "seen_count": 1,
+    "seen_on": [
+      "https://www.webdesign-journal.de/bento-grid/"
+    ],
+    "first_seen": "2026-03-17T10:33:44.692Z",
+    "last_seen": "2026-03-17T10:33:44.692Z",
+    "source_url": "https://www.webdesign-journal.de/bento-grid/"
+  },
+  {
+    "id": "5rmR27oa2ITpK-fFQVOG3",
+    "status": "pending",
+    "observation": "The use of simple icons with bold colors for project representation is visually striking and effectively communicates the brand's modern aesthetic.",
+    "category": "color",
+    "confidence": 0.8,
+    "css_hint": null,
+    "reusability": "universal",
+    "seen_count": 1,
+    "seen_on": [
+      "https://mw.works/"
+    ],
+    "first_seen": "2026-03-17T10:36:09.643Z",
+    "last_seen": "2026-03-17T10:36:09.643Z",
+    "source_url": "https://mw.works/"
+  },
+  {
+    "id": "PDniph3Fj2l6VEFGv_4L-",
+    "status": "pending",
+    "observation": "The layout's minimalistic approach with ample white space enhances readability and focus on content.",
+    "category": "layout",
+    "confidence": 0.75,
+    "css_hint": null,
+    "reusability": "universal",
+    "seen_count": 1,
+    "seen_on": [
+      "https://mw.works/"
+    ],
+    "first_seen": "2026-03-17T10:36:09.643Z",
+    "last_seen": "2026-03-17T10:36:09.643Z",
+    "source_url": "https://mw.works/"
+  },
+  {
+    "id": "xSOyD9ZhtB_Dhe6Sbu5QH",
+    "status": "pending",
+    "observation": "The use of simple iconography with bold colors creates a visually striking yet minimalistic design.",
+    "category": "color",
+    "confidence": 0.8,
+    "css_hint": null,
+    "reusability": "universal",
+    "seen_count": 1,
+    "seen_on": [
+      "https://mw.works/"
+    ],
+    "first_seen": "2026-03-17T10:36:45.936Z",
+    "last_seen": "2026-03-17T10:36:45.936Z",
+    "source_url": "https://mw.works/"
+  },
+  {
+    "id": "gZd42DuMkaJ0JhjC9layA",
+    "status": "pending",
+    "observation": "The layout effectively uses whitespace to create a sense of openness and focus on content.",
+    "category": "layout",
+    "confidence": 0.75,
+    "css_hint": null,
+    "reusability": "universal",
+    "seen_count": 1,
+    "seen_on": [
+      "https://mw.works/"
+    ],
+    "first_seen": "2026-03-17T10:36:45.937Z",
+    "last_seen": "2026-03-17T10:36:45.937Z",
+    "source_url": "https://mw.works/"
+  },
+  {
+    "id": "VzV_tl3vDk1aoafXvtvSd",
+    "status": "pending",
+    "observation": "The use of pixelated text for the main headline is a clever nod to retro digital aesthetics, creating a unique visual identity.",
+    "category": "typography",
+    "confidence": 0.75,
+    "css_hint": null,
+    "reusability": "paradigm-specific",
+    "seen_count": 1,
+    "seen_on": [
+      "https://arcade.la/brand-sprint"
+    ],
+    "first_seen": "2026-03-17T10:39:11.544Z",
+    "last_seen": "2026-03-17T10:39:11.544Z",
+    "source_url": "https://arcade.la/brand-sprint"
+  },
+  {
+    "id": "q_M8yfQGEQYn-LO77MraR",
+    "status": "pending",
+    "observation": "The hero section's minimal design with a strong focus on typography and color contrast effectively draws attention to the call-to-action buttons.",
+    "category": "layout",
+    "confidence": 0.7,
+    "css_hint": null,
+    "reusability": "universal",
+    "seen_count": 1,
+    "seen_on": [
+      "https://arcade.la/brand-sprint"
+    ],
+    "first_seen": "2026-03-17T10:39:11.545Z",
+    "last_seen": "2026-03-17T10:39:11.545Z",
+    "source_url": "https://arcade.la/brand-sprint"
+  }
+]

@@ -1,0 +1,112 @@
+{
+  "id": "bento-grid-v1",
+  "paradigm": "bento-grid",
+  "rules": {
+    "layout": {
+      "section_padding": "py-16 md:py-24",
+      "max_width": "max-w-7xl mx-auto",
+      "columns_max": 4,
+      "overlaps_allowed": false,
+      "negative_margin_allowed": false,
+      "full_bleed_allowed": false,
+      "section_transition": "flat"
+    },
+    "typography": {
+      "heading_font": "font-display",
+      "heading_weight": "font-semibold",
+      "heading_size_hero": "text-4xl md:text-6xl",
+      "heading_size_section": "text-2xl md:text-3xl",
+      "tracking": "tracking-tight",
+      "gradient_text_allowed": true
+    },
+    "color": {
+      "base": "mixed",
+      "dark_sections_allowed": true,
+      "gradient_allowed": true,
+      "accent_count_max": 2,
+      "section_bg_sequence": [
+        "background",
+        "surface",
+        "dark",
+        "background"
+      ],
+      "bg_animation_mode": "none"
+    },
+    "animation": {
+      "budget": "subtle",
+      "keyframes_allowed": false,
+      "scroll_driven_allowed": false,
+      "text_animations_allowed": [],
+      "hover_effects_allowed": [
+        "scale"
+      ]
+    },
+    "decoration": {
+      "mesh_gradient": false,
+      "glassmorphism": false,
+      "border_glow": false,
+      "geometric_shapes": false,
+      "noise_texture": false,
+      "color_overlays": true,
+      "diagonal_cuts": false,
+      "concave_sections": false
+    }
+  },
+  "forbidden_patterns": [
+    "uniform grid — alle Tiles gleich groß (verboten — mind. 3 verschiedene Tile-Größen)",
+    "border-radius kleiner als rounded-2xl (alle Tiles: rounded-2xl oder rounded-3xl)",
+    "Tailwind shadow-* auf Tiles (kein shadow-md, shadow-lg — kein Box-Shadow auf Tiles)",
+    "border auf Tiles (kein border-* — Tiefenwirkung durch Hintergrundfarben-Kontrast)",
+    "volle Textblöcke über gesamte Breite (max col-span-2 für Text-Tiles)",
+    "min-h-screen ohne md: prefix",
+    "alle Tiles mit gleicher Hintergrundfarbe (jede Tile MUSS eigene bg bekommen)"
+  ],
+  "required_patterns": [
+    "CSS Grid: grid-cols-1 md:grid-cols-4 gap-3 auto-rows-[minmax(200px,auto)]",
+    "mindestens 1 Hero-Tile: md:col-span-2 md:row-span-2 (primäre Message oder Metrik)",
+    "mindestens 1 Wide-Tile: md:col-span-2 row-span-1 (sekundäres Feature)",
+    "mindestens 2 Small-Tiles: col-span-1 row-span-1 (einzelne Stats, Icons, Microcopy)",
+    "jede Tile: eigene Hintergrundfarbe — abwechseln zwischen surface/dark/primary/accent/background",
+    "Tile-Inhalt: flex flex-col justify-between — Label oben, Stat/CTA unten verankert",
+    "mindestens 1 Image-Tile: Bild füllt Tile vollständig (object-cover absolute inset-0)",
+    "alle Tiles: rounded-2xl overflow-hidden p-6 oder p-8"
+  ],
+  "html_patterns": {
+    "section_wrapper": "<section class=\"relative py-16 md:py-24\" style=\"background-color: var(--color-background)\">",
+    "container": "<div class=\"max-w-7xl mx-auto px-4 md:px-8\">",
+    "bento_grid": "<div class=\"grid grid-cols-1 md:grid-cols-4 gap-3 auto-rows-[minmax(200px,auto)]\">",
+    "bento_tile_hero": "<div class=\"md:col-span-2 md:row-span-2 rounded-2xl p-8 flex flex-col justify-between overflow-hidden relative\" style=\"background-color: var(--color-dark)\">",
+    "bento_tile_wide": "<div class=\"md:col-span-2 rounded-2xl p-6 flex flex-col justify-between overflow-hidden relative\" style=\"background-color: var(--color-surface)\">",
+    "bento_tile_small_dark": "<div class=\"rounded-2xl p-6 flex flex-col justify-between overflow-hidden relative\" style=\"background-color: var(--color-primary)\">",
+    "bento_tile_small_light": "<div class=\"rounded-2xl p-6 flex flex-col justify-between overflow-hidden relative\" style=\"background-color: var(--color-surface)\">",
+    "bento_tile_image": "<div class=\"md:col-span-1 rounded-2xl overflow-hidden relative\" style=\"min-height: 200px\"><img src=\"https://picsum.photos/600/400?random=1\" alt=\"\" class=\"absolute inset-0 w-full h-full object-cover\"><div class=\"absolute inset-0 p-5 flex flex-col justify-end\" style=\"background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)\">",
+    "bento_stat": "<div class=\"font-display font-bold tracking-tight leading-none\" style=\"font-size: clamp(2rem,5vw,3.5rem); color: var(--color-accent)\">",
+    "bento_label": "<p class=\"text-xs font-semibold tracking-[0.12em] uppercase mb-3\" style=\"color: var(--color-text-muted)\">",
+    "eyebrow": "<div class=\"text-[.68rem] font-semibold tracking-[.14em] uppercase mb-4\" style=\"color: var(--color-accent)\">LABEL</div>",
+    "hero_h1": "<h1 class=\"font-display font-semibold text-4xl md:text-6xl tracking-tight leading-[1.05]\">",
+    "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]\" style=\"background-color:var(--color-accent);color:#fff\">",
+    "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl border transition-all duration-200 hover:scale-[1.02]\" style=\"border-color:var(--color-accent);color:var(--color-accent)\">",
+    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors\" style=\"color:var(--color-text-muted)\">",
+    "card": "<div class=\"rounded-2xl p-6 flex flex-col justify-between overflow-hidden relative\" style=\"background-color: var(--color-surface)\">",
+    "card_hover": "group-hover:scale-[1.015]",
+    "card_hover_classes": "transition-transform duration-200 ease-out",
+    "card_wrapper": "<div class=\"group cursor-pointer\">"
+  },
+  "variants": {
+    "hero": [
+      {
+        "name": "bento-3-column-with-images",
+        "description": "Bento 3 Column Example 1",
+        "html": "<div class=\"bg-gray-50 py-24 sm:py-32\">\n  <div class=\"mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8\">\n    <h2 class=\"text-center text-base/7 font-semibold text-indigo-600\">Deploy faster</h2>\n    <p class=\"mx-auto mt-2 max-w-lg text-center text-4xl font-semibold tracking-tight text-balance text-gray-950 sm:text-5xl\">Everything you need to deploy your app</p>\n    <div class=\"mt-10 grid gap-4 sm:mt-16 lg:grid-cols-3 lg:grid-rows-2\">\n      <div class=\"relative lg:row-span-2\">\n        <div class=\"absolute inset-px rounded-lg bg-white lg:rounded-l-4xl\"></div>\n        <div class=\"relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] lg:rounded-l-[calc(2rem+1px)]\">\n          <div class=\"px-8 pt-8 pb-3 sm:px-10 sm:pt-10 sm:pb-0\">\n            <p class=\"mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center\">Mobile friendly</p>\n            <p class=\"mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center\">Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo.</p>\n          </div>\n          <div class=\"@container relative min-h-120 w-full grow max-lg:mx-auto max-lg:max-w-sm\">\n            <div class=\"absolute inset-x-10 top-10 bottom-0 overflow-hidden rounded-t-[12cqw] border-x-[3cqw] border-t-[3cqw] border-gray-700 bg-gray-900 shadow-2xl\">\n              <img src=\"https://tailwindcss.com/plus-assets/img/component-images/bento-03-mobile-friendly.png\" alt=\"\" class=\"size-full object-cover object-top\" />\n            </div>\n          </div>\n        </div>\n        <div class=\"pointer-events-none absolute inset-px rounded-lg shadow-sm outline outline-black/5 lg:rounded-l-4xl\"></div>\n      </div>\n      <div class=\"relative max-lg:row-start-1\">\n        <div class=\"absolute inset-px rounded-lg bg-white max-lg:rounded-t-4xl\"></div>\n        <div class=\"relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]\">\n          <div class=\"px-8 pt-8 sm:px-10 sm:pt-10\">\n            <p class=\"mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center\">Performance</p>\n            <p class=\"mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center\">Lorem ipsum, dolor sit amet consectetur adipisicing elit maiores impedit.</p>\n          </div>\n          <div class=\"flex flex-1 items-center justify-center px-8 max-lg:pt-10 max-lg:pb-12 sm:px-10 lg:pb-2\">\n            <img src=\"https://tailwindcss.com/plus-assets/img/component-images/bento-03-performance.png\" alt=\"\" class=\"w-full max-lg:max-w-xs\" />\n          </div>\n        </div>\n        <div class=\"pointer-events-none absolute inset-px rounded-lg shadow-sm outline outline-black/5 max-lg:rounded-t-4xl\"></div>\n      </div>\n      <div class=\"relative max-lg:row-start-3 lg:col-start-2 lg:row-start-2\">\n        <div class=\"absolute inset-px rounded-lg bg-white\"></div>\n        <div class=\"relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)]\">\n          <div class=\"px-8 pt-8 sm:px-10 sm:pt-10\">\n            <p class=\"mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center\">Security</p>\n            <p class=\"mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center\">Morbi viverra dui mi arcu sed. Tellus semper adipiscing suspendisse semper morbi.</p>\n          </div>\n          <div class=\"@container flex flex-1 items-center max-lg:py-6 lg:pb-2\">\n            <img src=\"https://tailwindcss.com/plus-assets/img/component-images/bento-03-security.png\" alt=\"\" class=\"h-[min(152px,40cqw)] object-cover\" />\n          </div>\n        </div>\n        <div class=\"pointer-events-none absolute inset-px rounded-lg shadow-sm outline outline-black/5\"></div>\n      </div>\n      <div class=\"relative lg:row-span-2\">\n        <div class=\"absolute inset-px rounded-lg bg-white max-lg:rounded-b-4xl lg:rounded-r-4xl\"></div>\n        <div class=\"relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] max-lg:rounded-b-[calc(2rem+1px)] lg:rounded-r-[calc(2rem+1px)]\">\n          <div class=\"px-8 pt-8 pb-3 sm:px-10 sm:pt-10 sm:pb-0\">\n            <p class=\"mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center\">Powerful APIs</p>\n            <p class=\"mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center\">Sit quis amet rutrum tellus ullamcorper ultricies libero dolor eget sem sodales gravida.</p>\n          </div>\n          <div class=\"relative min-h-120 w-full grow\">\n            <div class=\"absolute top-10 right-0 bottom-0 left-10 overflow-hidden rounded-tl-xl bg-gray-900 shadow-2xl outline outline-white/10\">\n              <div class=\"flex bg-gray-900 outline outline-white/5\">\n                <div class=\"-mb-px flex text-sm/6 font-medium text-gray-400\">\n                  <div class=\"border-r border-b border-r-white/10 border-b-white/20 bg-white/5 px-4 py-2 text-white\">NotificationSetting.jsx</div>\n                  <div class=\"border-r border-gray-600/10 px-4 py-2\">App.jsx</div>\n                </div>\n              </div>\n              <div class=\"px-6 pt-6 pb-14\">\n                <!-- Your code example -->\n              </div>\n            </div>\n          </div>\n        </div>\n        <div class=\"pointer-events-none absolute inset-px rounded-lg shadow-sm outline outline-black/5 max-lg:rounded-b-4xl lg:rounded-r-4xl\"></div>\n      </div>\n    </div>\n  </div>\n</div>",
+        "tags": [
+          "light",
+          "bento",
+          "3 columns",
+          "hero",
+          "bento-grid"
+        ],
+        "preview_note": "Manually added"
+      }
+    ]
+  }
+}

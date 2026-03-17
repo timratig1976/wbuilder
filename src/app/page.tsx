@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Zap, Wand2, Download, Layers, Database, Sparkles, FolderOpen } from 'lucide-react'
+import { Zap, Wand2, Download, Layers, Database, Sparkles, FolderOpen, Image as ImageIcon } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -62,6 +62,12 @@ export default function Home() {
             className="inline-flex items-center gap-1.5 text-indigo-300 hover:text-white text-sm font-medium transition-colors"
           >
             <Database className="w-4 h-4" /> Block Library & Scraper
+          </Link>
+          <Link
+            href="/images"
+            className="inline-flex items-center gap-1.5 text-indigo-300 hover:text-white text-sm font-medium transition-colors"
+          >
+            <ImageIcon className="w-4 h-4" /> Image Library
           </Link>
         </div>
       </div>

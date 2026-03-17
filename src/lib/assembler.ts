@@ -1,5 +1,86 @@
 import { Section } from './store'
 import { SiteManifest } from './types/manifest'
+import { SectionTransition } from './types/manifest'
+import { sanitizeSvgPoints } from './generation/autoFix'
+
+// ── Section transition SVG dividers ──────────────────────────────────────────
+
+/**
+ * Detects which color token a section uses as its background by scanning
+ * the outermost <section> element's style attribute.
+ * Returns the CSS variable name without var() wrapper, e.g. '--color-dark'
+ */
+function detectSectionBgToken(html: string): string {
+  // Look for background-color: var(--color-X) on the first <section> tag
+  const m = html.match(/<section[^>]*style="[^"]*background-color:\s*var\((--color-[a-z-]+)\)/)
+  if (m) return m[1]
+  // Fallback: Tailwind bg-dark / bg-surface class on section
+  if (/<section[^>]*class="[^"]*\bbg-dark\b/.test(html)) return '--color-dark'
+  if (/<section[^>]*class="[^"]*\bbg-surface\b/.test(html)) return '--color-surface'
+  if (/<section[^>]*class="[^"]*\bbg-primary\b/.test(html)) return '--color-primary'
+  return '--color-background'
+}
+
+/**
+ * Resolves a CSS variable token name to the actual hex value from the manifest.
+ */
+function resolveColorToken(token: string, manifest: SiteManifest): string {
+  const c = manifest.design_tokens.colors
+  const map: Record<string, string> = {
+    '--color-primary':    c.primary,
+    '--color-secondary':  c.secondary,
+    '--color-accent':     c.accent,
+    '--color-highlight':  c.highlight,
+    '--color-background': c.background,
+    '--color-surface':    c.surface,
+    '--color-dark':       c.dark,
+    '--color-text':       c.text,
+    '--color-text-muted': c.text_muted,
+  }
+  return map[token] ?? c.background
+}
+
+/**
+ * Generates an SVG transition divider that OVERLAPS into the next section.
+ * The SVG wrapper uses a negative margin-bottom equal to its height so it
+ * pulls the next section up — no whitespace is added.
+ * Returns null when no transition should be rendered.
+ * Also returns the overlap depth so the next section can add compensating padding-top.
+ */
+function buildTransitionSvg(
+  type: SectionTransition,
+  fromColor: string,
+  toColor: string
+): { html: string; overlapPx: number } | null {
+  if (type === 'flat' || fromColor === toColor) return null
+
+  type TransitionDef = { height: number; svg: string }
+  const defs: Record<Exclude<SectionTransition, 'flat'>, TransitionDef> = {
+    'wave-bottom': {
+      height: 80,
+      svg: `<svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="display:block;width:100%;height:80px"><path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="${toColor}"/></svg>`,
+    },
+    'concave-bottom': {
+      height: 80,
+      svg: `<svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="display:block;width:100%;height:80px"><path d="M0,0 Q720,80 1440,0 L1440,80 L0,80 Z" fill="${toColor}"/></svg>`,
+    },
+    'convex-bottom': {
+      height: 80,
+      svg: `<svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="display:block;width:100%;height:80px"><path d="M0,80 Q720,0 1440,80 L1440,80 L0,80 Z" fill="${toColor}"/></svg>`,
+    },
+    'diagonal-bottom': {
+      height: 60,
+      svg: `<svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="display:block;width:100%;height:60px"><polygon points="0,60 1440,0 1440,60" fill="${toColor}"/></svg>`,
+    },
+  }
+
+  const def = defs[type as Exclude<SectionTransition, 'flat'>]
+  if (!def) return null
+
+  // negative margin-bottom = overlap into the next section — zero whitespace added
+  const html = `<div aria-hidden="true" style="line-height:0;overflow:hidden;background-color:${fromColor};margin-bottom:-${def.height}px;position:relative;z-index:1;pointer-events:none">${def.svg}</div>`
+  return { html, overlapPx: def.height }
+}
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -179,7 +260,69 @@ ${body}
 }
 
 export function assemblePreview(sections: Section[], manifest?: SiteManifest | null): string {
-  const body = sections.map((s) => `<div data-section-id="${s.id}">${scopeScripts(s.html)}</div>`).join('\n\n')
+  // Resolve section_transition type from the manifest's style dictionary reference
+  // We read the JSON directly to avoid an async import — style dictionaries are small
+  let transitionType: SectionTransition = 'flat'
+  if (manifest?.style_dictionary_ref) {
+    try {
+      // Dynamic require only runs server-side; in the iframe preview context we rely
+      // on the manifest.design_spec or fall back to flat
+      const dictRef = manifest.style_dictionary_ref
+      // Map known paradigm refs to their transition type without a file read
+      const transitionMap: Record<string, SectionTransition> = {
+        'bold-expressive-v1':  'concave-bottom',
+        'tech-dark-v1':        'flat',
+        'minimal-clean-v1':    'flat',
+        'luxury-editorial-v1': 'flat',
+        'bento-grid-v1':       'flat',
+        'brutalist-v1':        'flat',
+      }
+      transitionType = transitionMap[dictRef] ?? 'flat'
+    } catch { /* non-fatal */ }
+  }
+
+  // Build body with transition SVGs injected between sections
+  const sectionDivs = sections.map((s) => ({
+    id: s.id,
+    type: s.type ?? '',
+    html: scopeScripts(sanitizeSvgPoints(s.html)),
+    bgToken: detectSectionBgToken(s.html),
+  }))
+
+  const bodyParts: string[] = []
+  // pendingPaddingTop: overlap depth to add to the NEXT section wrapper
+  let pendingPaddingTop = 0
+  for (let i = 0; i < sectionDivs.length; i++) {
+    const s = sectionDivs[i]
+    const isNavbar = s.type === 'navbar' || s.html.includes('<nav')
+    const isFooter = s.type === 'footer' || i === sectionDivs.length - 1
+
+    // Apply any pending padding-top from a previous transition overlap
+    const ptStyle = pendingPaddingTop > 0
+      ? ` style="padding-top:${pendingPaddingTop}px"`
+      : ''
+    pendingPaddingTop = 0
+
+    bodyParts.push(`<div data-section-id="${s.id}"${ptStyle}>${s.html}</div>`)
+
+    // Inject transition: skip after navbar, skip before/at footer, skip if same bg
+    const canTransition = manifest
+      && transitionType !== 'flat'
+      && !isNavbar
+      && !isFooter
+      && i < sectionDivs.length - 1
+
+    if (canTransition) {
+      const fromColor = resolveColorToken(s.bgToken, manifest!)
+      const toColor = resolveColorToken(sectionDivs[i + 1].bgToken, manifest!)
+      const result = buildTransitionSvg(transitionType, fromColor, toColor)
+      if (result) {
+        bodyParts.push(result.html)
+        pendingPaddingTop = result.overlapPx
+      }
+    }
+  }
+  const body = bodyParts.join('\n\n')
 
   const fontLink = manifest
     ? (() => { const url = buildGoogleFontUrl(manifest); return url ? `<link href="${url}" rel="stylesheet" />` : '' })()
@@ -333,7 +476,43 @@ export function assemblePageWithManifest(
   sectionHtmlList: string[],
   manifest: SiteManifest
 ): string {
-  const body = sectionHtmlList.map((html) => scopeScripts(html)).join('\n\n')
+  const transitionMap: Record<string, SectionTransition> = {
+    'bold-expressive-v1':  'concave-bottom',
+    'tech-dark-v1':        'flat',
+    'minimal-clean-v1':    'flat',
+    'luxury-editorial-v1': 'flat',
+    'bento-grid-v1':       'flat',
+    'brutalist-v1':        'flat',
+  }
+  const transitionType: SectionTransition = transitionMap[manifest.style_dictionary_ref] ?? 'flat'
+
+  const bodyParts: string[] = []
+  let pendingPaddingTop = 0
+  for (let i = 0; i < sectionHtmlList.length; i++) {
+    const html = sectionHtmlList[i]
+    const isNavbar = html.includes('<nav')
+    const isLast = i === sectionHtmlList.length - 1
+
+    const ptStyle = pendingPaddingTop > 0 ? ` style="padding-top:${pendingPaddingTop}px"` : ''
+    pendingPaddingTop = 0
+    bodyParts.push(ptStyle ? `<div${ptStyle}>${scopeScripts(html)}</div>` : scopeScripts(html))
+
+    const canTransition = transitionType !== 'flat' && !isNavbar && !isLast
+    if (canTransition) {
+      const fromToken = detectSectionBgToken(html)
+      const toToken = detectSectionBgToken(sectionHtmlList[i + 1])
+      const result = buildTransitionSvg(
+        transitionType,
+        resolveColorToken(fromToken, manifest),
+        resolveColorToken(toToken, manifest)
+      )
+      if (result) {
+        bodyParts.push(result.html)
+        pendingPaddingTop = result.overlapPx
+      }
+    }
+  }
+  const body = bodyParts.join('\n\n')
   const fontUrl = buildGoogleFontUrl(manifest)
 
   return `<!DOCTYPE html>

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       company_name, industry, adjectives, tone, primary_cta,
-      personas, pain_points, style_paradigm, animation_budget,
+      personas, pain_points, style_paradigm, visual_tone, animation_budget,
       navbar_style, navbar_mobile, brand_colors, pages,
       selected_pattern_ids,
     } = body
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       personas: personas ?? [],
       pain_points: pain_points ?? [],
       style_paradigm,
+      visual_tone: visual_tone ?? 'confident',
       animation_budget: animation_budget ?? 'moderate',
       navbar_style: navbar_style ?? 'sticky-blur',
       navbar_mobile: navbar_mobile ?? 'hamburger-dropdown',

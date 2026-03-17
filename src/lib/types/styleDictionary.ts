@@ -1,7 +1,20 @@
 import { StyleParadigm, SectionTransition } from './manifest'
 
+export interface PatternVariant {
+  name: string
+  description: string
+  html: string
+  tags: string[]        // e.g. ['card', 'testimonial', 'dark'] — for lazy section-type injection
+  preview_note?: string // optional human note for the UI
+}
+
 export interface StyleDictionary {
-  id: string; paradigm: StyleParadigm
+  id: string
+  paradigm: StyleParadigm | string  // string allows custom user-defined paradigms
+  label?: string                    // human-readable name for custom paradigms
+  description?: string              // short description shown in overview
+  is_custom?: boolean               // true = user-created, editable
+  active?: boolean                  // false = hidden from briefing wizard
   rules: {
     layout: {
       section_padding: string; max_width: string
@@ -18,7 +31,8 @@ export interface StyleDictionary {
       base: string; dark_sections_allowed: boolean
       gradient_allowed: boolean; accent_count_max: number
       section_bg_sequence?: string[]
-      bg_animation_mode?: 'none' | 'per-section' | 'page-level'
+      bg_animation_mode?: 'none' | 'per-section' | 'focus-sections'
+      bg_animation_focus_sections?: string[]  // section types that get animation, e.g. ['hero', 'contact']
     }
     animation: {
       budget: 'none' | 'subtle' | 'moderate' | 'rich'
@@ -36,4 +50,6 @@ export interface StyleDictionary {
   forbidden_patterns: string[]
   required_patterns: string[]
   html_patterns: Record<string, string>
+  // Named variant library per slot — AI picks based on section context
+  variants?: Record<string, PatternVariant[]>
 }

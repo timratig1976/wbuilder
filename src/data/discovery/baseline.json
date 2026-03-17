@@ -1,1 +1,160 @@
-{ "sites_count": 0, "properties": {} }
+{
+  "sites_count": 5,
+  "properties": {
+    "h1_font": {
+      "count": 5,
+      "values": {
+        "\"Bricolage Grotesque\", sans-serif": 2,
+        "": 3
+      }
+    },
+    "h1_weight": {
+      "count": 5,
+      "values": {
+        "700": 2,
+        "": 3
+      }
+    },
+    "h1_size": {
+      "count": 5,
+      "values": {
+        "41px": 2,
+        "": 3
+      }
+    },
+    "body_font": {
+      "count": 5,
+      "values": {
+        "adelle-sans, Helvetica, Arial, sans-serif": 2,
+        "sans-serif": 3
+      }
+    },
+    "body_bg": {
+      "count": 5,
+      "values": {
+        "rgb(255, 255, 255)": 4,
+        "rgb(15, 15, 15)": 1
+      }
+    },
+    "body_color": {
+      "count": 5,
+      "values": {
+        "rgb(34, 34, 34)": 2,
+        "rgb(0, 0, 0)": 3
+      }
+    },
+    "nav_bg": {
+      "count": 5,
+      "values": {
+        "rgba(0, 0, 0, 0)": 2,
+        "": 3
+      }
+    },
+    "nav_position": {
+      "count": 5,
+      "values": {
+        "static": 2,
+        "": 3
+      }
+    },
+    "has_backdrop_blur": {
+      "count": 5,
+      "values": {
+        "false": 5
+      }
+    },
+    "has_clip_path": {
+      "count": 5,
+      "values": {
+        "true": 2,
+        "false": 3
+      }
+    },
+    "has_svg_background": {
+      "count": 5,
+      "values": {
+        "false": 5
+      }
+    },
+    "has_scroll_animation": {
+      "count": 5,
+      "values": {
+        "false": 5
+      }
+    },
+    "has_counter_anim": {
+      "count": 5,
+      "values": {
+        "false": 5
+      }
+    },
+    "has_gradient_text": {
+      "count": 5,
+      "values": {
+        "false": 5
+      }
+    },
+    "has_noise_texture": {
+      "count": 5,
+      "values": {
+        "false": 5
+      }
+    },
+    "has_bento_grid": {
+      "count": 5,
+      "values": {
+        "true": 2,
+        "false": 3
+      }
+    },
+    "has_transparent_nav": {
+      "count": 5,
+      "values": {
+        "true": 2,
+        "false": 3
+      }
+    },
+    "has_negative_margin": {
+      "count": 5,
+      "values": {
+        "false": 5
+      }
+    },
+    "has_css_transitions": {
+      "count": 5,
+      "values": {
+        "true": 5
+      }
+    },
+    "section_count": {
+      "count": 5,
+      "values": {
+        "0": 2,
+        "1": 1,
+        "2": 2
+      }
+    },
+    "grid_count": {
+      "count": 5,
+      "values": {
+        "0": 2,
+        "1": 2,
+        "2": 1
+      }
+    },
+    "svg_count": {
+      "count": 5,
+      "values": {
+        "3": 2,
+        "5": 1,
+        "21": 2
+      }
+    },
+    "theme_color": {
+      "count": 5,
+      "values": {
+        "": 5
+      }
+    }
+  }
+}

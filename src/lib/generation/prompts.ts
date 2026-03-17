@@ -41,6 +41,7 @@ export function buildManifestPrompt(input: {
   personas: string[]
   pain_points: string[]
   style_paradigm: string
+  visual_tone?: string
   animation_budget: string
   navbar_style: string
   navbar_mobile: string
@@ -57,6 +58,7 @@ Primary CTA: ${input.primary_cta}
 Personas: ${input.personas.join('; ')}
 Pain Points: ${input.pain_points.join('; ')}
 Style Paradigm: ${input.style_paradigm}
+Visual Tone: ${input.visual_tone ?? 'confident'}
 Animation Budget: ${input.animation_budget}
 Navbar Style: ${input.navbar_style}
 Navbar Mobile: ${input.navbar_mobile}
@@ -115,6 +117,7 @@ Generate the manifest following this exact schema:
     }
   },
   "style_paradigm": "${input.style_paradigm}",
+  "visual_tone": "${input.visual_tone ?? 'confident'}",
   "style_dictionary_ref": "${input.style_paradigm}-v1",
   "style_source": { "type": "ai-generated" },
   "navbar": {
@@ -185,7 +188,7 @@ Generate the manifest following this exact schema:
 // PASS 1 — STRUCTURE PROMPT
 // ═══════════════════════════════════════════════════════
 
-export function buildPass1System(dict: StyleDictionary, manifest: SiteManifest): string {
+export function buildPass1System(dict: StyleDictionary, manifest: SiteManifest, sectionType?: string): string {
   const tokens = manifest.design_tokens
   const { layout, typography, color, decoration } = dict.rules
   // design_spec on the manifest takes precedence over raw dictionary patterns
@@ -205,13 +208,92 @@ export function buildPass1System(dict: StyleDictionary, manifest: SiteManifest):
   }
 
   // Effective animation settings — design_spec overrides dictionary
-  const effectiveBgMode     = ds?.animation.bg_mode              ?? color.bg_animation_mode  ?? 'none'
-  const effectiveBgSequence = ds?.animation.section_bg_sequence  ?? color.section_bg_sequence ?? ['background', 'surface']
+  const effectiveBgMode          = ds?.animation.bg_mode              ?? color.bg_animation_mode          ?? 'none'
+  const effectiveBgSequence      = ds?.animation.section_bg_sequence  ?? color.section_bg_sequence       ?? ['background', 'surface']
+  const effectiveFocusSections   = color.bg_animation_focus_sections ?? ['hero']
 
   // Build the concrete HTML patterns block from the style dictionary
   const patternsBlock = Object.entries(hp)
     .map(([key, val]) => `${key}:\n  ${val}`)
     .join('\n')
+
+  // Lazy variant injection — only inject variants relevant to this sectionType
+  // Keeps token budget small: each section only sees its relevant variant options
+  const variantsBlock = (() => {
+    if (!dict.variants || !sectionType) return ''
+    const sectionKeywords = sectionType.toLowerCase().replace(/-/g, ' ').split(/\s+/)
+    const lines: string[] = []
+    for (const [slot, variants] of Object.entries(dict.variants)) {
+      if (!variants?.length) continue
+      // Filter: include variant if any of its tags overlap with section keywords
+      const relevant = variants.filter((v) =>
+        v.tags.some((tag) =>
+          sectionKeywords.some((kw) => tag.toLowerCase().includes(kw) || kw.includes(tag.toLowerCase()))
+        )
+      ).slice(0, 5) // max 5 variants per slot to stay within token budget
+      if (!relevant.length) continue
+      lines.push(`\n${slot} VARIANTS — pick the best fit for this section type:`)
+      relevant.forEach((v) => {
+        lines.push(`  [${v.name}] ${v.description}`)
+        lines.push(`    ${v.html}`)
+      })
+    }
+    return lines.length ? `\n\n── PATTERN VARIANTS ──${lines.join('\n')}\nUse the variant that best matches the section context. If none match, use the default pattern above.` : ''
+  })()
+
+  // Visual tone rules — orthogonal to paradigm, calibrate intensity
+  const tone = manifest.visual_tone ?? 'confident'
+  const visualToneBlock = {
+    whisper: `
+VISUAL TONE: WHISPER (subtle & quiet)
+- Whitespace: GENEROUS — use py-24 md:py-32 for sections, wide gaps between elements
+- Decoration: NONE — no geometric shapes, no mesh gradients, no border glows, no diagonal cuts
+- Typography: use lighter font weights (font-normal or font-medium for body, font-semibold max for headings)
+- Copy density: SHORT — max 1 short sentence per sub-item, prefer single-word labels
+- Color usage: RESTRAINED — use background and surface tokens only, avoid dark sections except footer
+- Cards: no hover translate effects — only subtle opacity change allowed
+- CTAs: ghost or secondary style preferred, minimal padding`,
+
+    editorial: `
+VISUAL TONE: EDITORIAL (structured & formal)
+- Whitespace: AMPLE — use py-20 md:py-28, clear vertical rhythm between elements
+- Decoration: MINIMAL — serif-forward typography is the decoration; no mesh, no geometric shapes
+- Typography: mix font weights deliberately — thin eyebrows, heavy headlines, regular body
+- Copy density: MEDIUM — complete sentences, editorial phrasing, no bullet-point telegrams
+- Color usage: CONTROLLED — max 2 section backgrounds per page, prefer surface over dark
+- Cards: flat with thin border, no hover translate — only underline or color shift
+- CTAs: secondary style preferred; primary only for the single most important action`,
+
+    confident: `
+VISUAL TONE: CONFIDENT (balanced & clear)
+- Whitespace: BALANCED — standard section padding py-16 md:py-24, clear hierarchy
+- Decoration: MODERATE — one decorative element per section max, keep opacity ≤ 0.08
+- Typography: bold headings, regular body — standard weight contrast
+- Copy density: MEDIUM — concise but complete, benefit-driven copy
+- Color usage: STANDARD — follow bg_sequence, include 1-2 dark sections for contrast
+- Cards: standard hover translate (-translate-y-1) with shadow
+- CTAs: primary for hero CTA, secondary for supporting actions`,
+
+    expressive: `
+VISUAL TONE: EXPRESSIVE (bold & energetic)
+- Whitespace: TIGHT — sections can be dense, overlapping elements encouraged if paradigm allows
+- Decoration: RICH — use geometric shapes, gradient overlays, border glows freely
+- Typography: heavy weights (font-bold, font-black), large tracking contrast, gradient text where allowed
+- Copy density: SHORT & PUNCHY — headlines do the heavy lifting, body is minimal
+- Color usage: HIGH CONTRAST — maximize dark sections, use primary/accent liberally in backgrounds
+- Cards: strong hover effects (translate + shadow + border glow)
+- CTAs: primary style everywhere, add hover shadow/glow in hero`,
+
+    electric: `
+VISUAL TONE: ELECTRIC (maximum energy)
+- Whitespace: COMPRESSED — every pixel working, tight gaps, overlapping layers
+- Decoration: MAXIMUM — mesh gradients, animated backgrounds, noise textures, geometric shapes all welcome
+- Typography: EXTREME contrast — display font at max size, mix ultra-light and ultra-bold in same heading
+- Copy density: ULTRA-SHORT — 2-3 word headlines, single-word CTAs, numbers > words
+- Color usage: VIBRANT MAXIMUM — dark sections dominate, neon accents, gradient everywhere
+- Cards: dramatic hover (large translate + glow + scale + shadow combination)
+- CTAs: always primary with glow, shimmer, or gradient fill; never ghost`,
+  }[tone] ?? ''
 
   return `You are an expert frontend developer. Generate a single HTML section — structure and content only.
 NO @keyframes, NO animations, NO transition-* in Pass 1. That is Pass 2's job.
@@ -252,10 +334,11 @@ SECTION BACKGROUND RULES (critical — prevents every section looking the same):
 - Navbar and footer are EXCLUDED from the sequence (they manage their own bg)
 
 BACKGROUND ANIMATION MODE: ${effectiveBgMode}
-${effectiveBgMode === 'page-level'
-  ? `- Page-level mode: SVG/geometric background animations belong ONLY in the hero section
-- All other sections use FLAT solid background colors — NO SVG shapes, NO animated bg, NO mesh gradients
-- This prevents the cut-off stacking look when sections are viewed together`
+${effectiveBgMode === 'focus-sections'
+  ? `- Focus-sections mode: animated BG decorations ONLY on these section types: ${effectiveFocusSections.join(', ')}
+- All OTHER section types use FLAT solid background colors — NO SVG shapes, NO animated bg, NO mesh gradients
+- For each focus section, use <!-- [BG: geometric-shapes | opacity: 0.06] --> placeholder — resolved in Pass 2
+- This keeps animations intentional and prevents the stacked cut-off look`
   : effectiveBgMode === 'per-section'
   ? `- Per-section mode: Each dark section MAY have its own subtle background decoration
 - Keep decorations SMALL (max 20% of section area) and low opacity (≤ 0.08) so they don't dominate
@@ -303,6 +386,99 @@ CARD HOVER RULES:
 
 FORBIDDEN (never use): ${dict.forbidden_patterns.join(' | ')}
 REQUIRED (always include): ${dict.required_patterns.join(' | ')}
+${dict.paradigm === 'brutalist' ? `
+══════════════════════════════════
+BRUTALIST RULES (absolute — these override everything else)
+══════════════════════════════════
+BORDER-FIRST DESIGN — borders are your primary visual element, not shadows or colors:
+- Every card, button, and section divider MUST have border-4 (minimum) with style="border-color: var(--color-text)"
+- Section separator: add border-b-4 with style="border-color: var(--color-text)" to every <section>
+- NO Tailwind shadow-* classes — NEVER. Shadows are CSS only: style="box-shadow: 6px 6px 0 var(--color-text)"
+
+OFFSET SHADOW SYSTEM (the #1 brutalist signature):
+- Cards: style="box-shadow: 6px 6px 0 var(--color-text)" on the card div (NOT wrapper)
+- Buttons: style="box-shadow: 4px 4px 0 var(--color-text)" on the <a> element
+- Hover state: add group-hover:translate-x-1 group-hover:translate-y-1 to the card — this makes the shadow appear to shrink (offset shift = brutalist click feel)
+- Dark sections: use style="box-shadow: 6px 6px 0 var(--color-accent)" instead
+
+TYPOGRAPHY — raw, loud, unapologetic:
+- ALL headings MUST be uppercase (add class="... uppercase")
+- Hero H1: font-size clamp(3rem, 12vw, 10rem), line-height 0.9, font-mono font-black uppercase
+- Section H2: text-5xl md:text-7xl font-mono font-black uppercase
+- Eyebrow label format: "// LABEL" or "[ LABEL ]" — not plain text
+- Body copy: font-mono text-sm, stark contrast (black on white, white on black)
+- ZERO gradient text, ZERO text shadows
+
+LAYOUT — raw grid, no polish:
+- NO rounded corners anywhere — NEVER use rounded-* except rounded-none
+- Grid gaps exposed: use gap-px (1px gap showing bg color as "border") or gap-4 for breathing room
+- Asymmetric layouts encouraged: one col-span-2 next to two col-span-1 tiles
+- Full-width borders as section dividers — no decorative lines, no hr-style dividers
+
+COLOR — maximum contrast, minimum palette:
+- Background: white (#fff) or near-black only
+- Accent: ONE aggressive flat color (var(--color-accent)) — used sparingly as punch
+- ZERO gradients, ZERO glassmorphism, ZERO opacity overlays
+- Dark sections: pure black bg + white text + accent for one element only
+
+WHAT BRUTALISM IS NOT — avoid these generic patterns:
+- NOT just "dark mode with thick borders" — the RAW EXPOSED structure is the aesthetic
+- NOT bold-expressive with borders added — brutalism actively rejects decoration
+- NOT neo-brutalism-lite — go all the way or it looks like a mistake` : ''}
+${dict.paradigm === 'bento-grid' ? `
+══════════════════════════════════
+BENTO GRID RULES (absolute — these override all layout rules above)
+══════════════════════════════════
+CORE CONCEPT — The grid IS the design:
+- Inspired by Japanese bento boxes and Apple's product spec pages
+- The entire grid of tiles is viewed as ONE composed picture — not a list of cards
+- Each tile serves exactly ONE purpose: one stat, one feature, one image, one CTA
+- Depth comes from BACKGROUND COLOR CONTRAST between tiles — no shadows, no borders
+- The viewer's eye flows across tiles of different sizes and colors — this IS the aesthetic
+
+GRID STRUCTURE (non-negotiable):
+- class="grid grid-cols-1 md:grid-cols-4 gap-3 auto-rows-[minmax(200px,auto)]"
+- MUST use minimum 3 different tile sizes — uniform grids are FORBIDDEN
+- All tiles: rounded-2xl overflow-hidden (NEVER rounded-none, NEVER border-*)
+
+TILE TAXONOMY — use ALL four types in every bento section:
+① HERO TILE (md:col-span-2 md:row-span-2) — ONE per grid, always top-left or top-right
+  - Primary headline + 1 sentence + primary CTA
+  - Dark or primary background, white text
+  - Pattern: <div class="md:col-span-2 md:row-span-2 rounded-2xl p-8 flex flex-col justify-between overflow-hidden relative" style="background-color: var(--color-dark)">
+
+② WIDE TILE (md:col-span-2 row-span-1) — ONE or TWO per grid
+  - Secondary feature headline + short body (2 lines max)
+  - Surface or accent background
+  - Pattern: <div class="md:col-span-2 rounded-2xl p-6 flex flex-col justify-between overflow-hidden relative" style="background-color: var(--color-surface)">
+
+③ STAT TILE (col-span-1 row-span-1) — TWO to FOUR per grid
+  - Single big number (clamp(2rem,5vw,3.5rem)) + label below
+  - Alternate between surface, primary, dark backgrounds
+  - Pattern: <div class="rounded-2xl p-6 flex flex-col justify-between overflow-hidden relative" style="background-color: var(--color-primary)">
+
+④ IMAGE TILE (col-span-1 row-span-1 or col-span-2) — ONE per grid
+  - Full-bleed image with gradient overlay, 1-2 words of text at bottom
+  - Pattern: <div class="rounded-2xl overflow-hidden relative" style="min-height:200px">
+      <img src="https://picsum.photos/600/400?random=N" alt="..." class="absolute inset-0 w-full h-full object-cover">
+      <div class="absolute inset-0 p-5 flex flex-col justify-end" style="background:linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 60%)">
+
+TILE CONTENT RULES:
+- Every tile: flex flex-col justify-between (label/eyebrow TOP, stat/CTA BOTTOM)
+- Eyebrow label: text-xs font-semibold tracking-[0.12em] uppercase, color: var(--color-text-muted) or white/60
+- Big stat: font-display font-bold, font-size clamp(2rem,5vw,3.5rem), color: var(--color-accent)
+- Icons: w-10 h-10 or w-12 h-12, positioned top-right (absolute top-4 right-4) OR inline with eyebrow
+- Body copy per tile: MAX 2 lines — tiles are scannable, not readable
+
+BACKGROUND COLOR VARIATION (mandatory — every tile MUST be different from neighbors):
+- Vary: var(--color-background) / var(--color-surface) / var(--color-dark) / var(--color-primary) / var(--color-accent)
+- NEVER two adjacent tiles with the same background
+- Accent background: use sparingly — max 1 tile per grid
+
+NO BORDERS, NO SHADOWS:
+- NEVER add border-* to tiles — the gap-3 between tiles + bg contrast creates separation
+- NEVER add shadow-* to tiles — completely flat, depth from color only
+- Hover: only scale-[1.015] — nothing else` : ''}
 
 IMAGE RULES (non-negotiable):
 - NEVER use local image paths like /images/*, /kunden/*, /photos/*, /assets/*.jpg, *.png
@@ -357,12 +533,14 @@ RESPONSIVE (non-negotiable)
 ══════════════════════════════════
 ${manifest.pass1_prompt_rules.rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 
+${visualToneBlock}
+
 SITE:
 Company: ${manifest.content.company_name} | Industry: ${manifest.site.industry}
 Tone: ${manifest.site.tone} | Adjectives: ${manifest.site.adjectives.join(', ')}${manifest.selected_patterns?.length ? `
 
 DESIGN PATTERNS (mandatory — apply to every section):
-${manifest.selected_patterns.map((p, i) => `${i + 1}. [${p.type}] ${p.name}: ${p.description}${p.preview_description ? ` — ${p.preview_description}` : ''}${p.implementation?.css_snippet ? `\n   CSS: ${p.implementation.css_snippet.slice(0, 200)}` : ''}${p.implementation?.placeholder ? `\n   Placeholder: ${p.implementation.placeholder}` : ''}`).join('\n')}` : ''}`
+${manifest.selected_patterns.map((p, i) => `${i + 1}. [${p.type}] ${p.name}: ${p.description}${p.preview_description ? ` — ${p.preview_description}` : ''}${p.implementation?.html_snippet ? `\n   USE THIS EXACT HTML: ${p.implementation.html_snippet.slice(0, 400)}` : ''}${p.implementation?.css_snippet ? `\n   CSS: ${p.implementation.css_snippet.slice(0, 200)}` : ''}${p.implementation?.placeholder ? `\n   Drop placeholder where appropriate: ${p.implementation.placeholder}` : ''}`).join('\n')}` : ''}`
 }
 
 export interface SectionPositionContext {
@@ -376,7 +554,8 @@ export function buildPass1User(
   sectionType: string,
   manifest: SiteManifest,
   referenceHtml?: string | null,
-  posCtx?: SectionPositionContext
+  posCtx?: SectionPositionContext,
+  pageIndex?: number
 ): string {
   const content = manifest.content
   const nav = manifest.navbar
@@ -435,6 +614,25 @@ ${posCtx.prevBg ? `- Section above uses background token: ${posCtx.prevBg} — M
 ${posCtx.nextBg ? `- Section below uses background token: ${posCtx.nextBg} — MUST use a DIFFERENT token` : ''}
 - Pick the correct token from the bg_sequence so adjacent sections never share the same background` : ''
 
+  const pageCtxBlock = (() => {
+    if (manifest.pages && manifest.pages.length > 1) {
+      const pi = pageIndex ?? 0
+      const mp = manifest.pages[pi] ?? manifest.pages[0]
+      const otherPages = manifest.pages
+        .filter((_, i) => i !== pi)
+        .map((p) => `"${p.title}" (${p.slug})`)
+        .join(', ')
+      return `
+PAGE CONTEXT (multi-page site — tailor content for THIS page only):
+- Current page: "${mp.title}" (slug: ${mp.slug})
+- Purpose: ${mp.sections.length > 0 ? `contains sections: ${mp.sections.join(', ')}` : 'general content page'}
+- Other pages in this site: ${otherPages}
+- Do NOT repeat hero-level company intros on non-home pages — assume user already knows the brand
+- Adapt CTA text and copy to match this page's specific purpose`
+    }
+    return ''
+  })()
+
   return `Create a "${sectionType}" section for:
 Company: ${content.company_name}
 USP: ${content.company_usp}
@@ -442,6 +640,7 @@ Primary CTA: ${content.primary_cta}
 Pain Points: ${content.pain_points.join(', ')}
 Trust Signals: ${content.trust_signals.join(', ')}
 Tone: ${manifest.site.tone}
+${pageCtxBlock}
 ${posBlock}
 IMAGE RULES (non-negotiable):
 - NEVER use local paths (/kunden/, /images/, /photos/, /assets/) — they don't exist
@@ -457,23 +656,61 @@ ${referenceHtml ? `\nREFERENCE SECTION (use as structural inspiration, not copy-
 
 export function buildPass2System(dict: StyleDictionary): string {
   return `You are a Visual-Developer enriching HTML sections with the visual layer.
-You receive finished HTML and resolve placeholder comments into concrete implementations.
+You receive finished HTML and resolve ALL placeholder comments into concrete implementations.
 
 OUTPUT FORMAT: Respond with ONLY raw HTML. No markdown, no code fences, no explanation.
 
 STYLE DICTIONARY — Animation budget: ${dict.rules.animation.budget}
 Allowed text animations: ${JSON.stringify(dict.rules.animation.text_animations_allowed ?? [])}
 Allowed hover effects: ${JSON.stringify(dict.rules.animation.hover_effects_allowed ?? [])}
-Decoration allowed: ${JSON.stringify(dict.rules.decoration)}
+Decoration: glassmorphism=${dict.rules.decoration.glassmorphism} | mesh=${dict.rules.decoration.mesh_gradient} | geometric=${dict.rules.decoration.geometric_shapes} | noise=${dict.rules.decoration.noise_texture} | glow=${dict.rules.decoration.border_glow}
+
+PLACEHOLDER RESOLUTION LOOKUP — replace each comment with the implementation below:
+
+<!-- [ANIM: word-cycle | words: [...]] -->
+→ Add a <style> block with @keyframes + JS IIFE that cycles words every 2.5s with fade transition:
+  <style>@media(prefers-reduced-motion:no-preference){.wc-word{display:inline-block;transition:opacity 0.4s,transform 0.4s}.wc-word.wc-out{opacity:0;transform:translateY(-8px)}.wc-word.wc-in{opacity:0;transform:translateY(8px)}}</style>
+  JS: parse the words array from the placeholder, build cycling logic with setInterval(2500)
+
+<!-- [BG: mesh-gradient | colors=primary+accent | opacity=X] -->
+→ Insert inside the <section> as first child, position:absolute inset-0 pointer-events-none z-0:
+  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;z:0;opacity:X;background:radial-gradient(ellipse at 20% 50%,var(--color-primary) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,var(--color-accent) 0%,transparent 50%),radial-gradient(ellipse at 60% 80%,var(--color-highlight) 0%,transparent 50%)"></div>
+
+<!-- [BG: geometric-shapes | color=primary | opacity=X] -->
+→ Insert inside <section> as first child, position:absolute inset-0 overflow-hidden pointer-events-none z-0:
+  <div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0"><svg style="position:absolute;top:-10%;right:-5%;width:40%;opacity:X;" viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="90" stroke="var(--color-primary)" stroke-width="1"/><circle cx="100" cy="100" r="60" stroke="var(--color-accent)" stroke-width="0.5"/><line x1="0" y1="100" x2="200" y2="100" stroke="var(--color-primary)" stroke-width="0.5"/><line x1="100" y1="0" x2="100" y2="200" stroke="var(--color-primary)" stroke-width="0.5"/></svg><svg style="position:absolute;bottom:-5%;left:-5%;width:30%;opacity:${0.6}X;" viewBox="0 0 160 160" fill="none"><rect x="20" y="20" width="120" height="120" stroke="var(--color-accent)" stroke-width="1" transform="rotate(45 80 80)"/></svg></div>
+
+<!-- [BG: noise-texture | opacity=X] -->
+→ Insert inside <section> as first child:
+  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;z-index:0;opacity:X;background-image:url('data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/></filter><rect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/></svg>');background-size:200px 200px"></div>
+
+<!-- [BG: photo-overlay | darken=X | gradient=bottom] -->
+→ Insert a picsum background image + gradient overlay:
+  <div aria-hidden="true" style="position:absolute;inset:0;z-index:0"><img src="https://picsum.photos/1440/900?random=99" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><div style="position:absolute;inset:0;background:linear-gradient(to top,var(--color-dark) 30%,rgba(0,0,0,0.5) 70%,rgba(0,0,0,0.2))"></div></div>
+
+<!-- [BG: svg-illustration | type=abstract | opacity=X] -->
+→ Same as geometric-shapes but use a more complex abstract SVG path composition
+
+<!-- [ANIM: counter-tick | target=NUMBER] -->
+→ The element has data-target="NUMBER". Add JS IIFE:
+  (function(){var els=document.querySelectorAll('[data-target]');var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){var el=e.target;var target=+el.dataset.target;var start=0;var dur=1800;var t0=null;function step(ts){if(!t0)t0=ts;var p=Math.min((ts-t0)/dur,1);el.textContent=Math.round(p*target).toLocaleString();if(p<1)requestAnimationFrame(step);}requestAnimationFrame(step);obs.unobserve(el);}});},{threshold:0.3});els.forEach(function(el){obs.observe(el);});})();
+
+<!-- [ANIM: scroll-driven | property=opacity | from=0 | to=1] -->
+→ Add CSS animation-timeline: scroll() to the target element, or use IntersectionObserver JS fallback for fade-in
+
+<!-- [TRANSITION: concave-bottom | next=X | depth=Ypx] -->
+→ NOTE: Section transitions are injected by the assembler — do NOT attempt to render this placeholder.
+  The assembler handles overlap via negative margin-bottom on the SVG divider + padding-top on the next section.
+  Remove this comment from the HTML output entirely.
 
 INSTRUCTIONS:
-1. Replace <!-- [ANIM: word-cycle | words: [...]] --> with a working JS word-cycle implementation
-2. Replace <!-- [BG: geometric-shapes | opacity: X] --> with inline SVG background shapes
-3. Add @keyframes inside a <style> block at the top of the section
-4. Wrap ALL @keyframes in: @media (prefers-reduced-motion: no-preference) { ... }
-5. Do NOT change structure, copy, or layout — only add visual layer
-6. Keep all CSS Custom Properties (var(--color-*)) intact
-7. All scripts must be IIFE: (function() { ... })()`
+1. Find EVERY placeholder comment in the HTML and replace it using the lookup above
+2. Add a single <style> block at the TOP of the section for all @keyframes (wrapped in prefers-reduced-motion)
+3. All JS must be IIFE: (function(){ ... })()
+4. Do NOT change structure, copy, or layout — only add visual layer on top
+5. Keep all var(--color-*) tokens intact — never hardcode hex values
+6. Make sure added absolute-positioned elements have pointer-events:none so they don't block clicks
+7. If animation budget is 'none' — skip ALL animation placeholders but still resolve BG placeholders`
 }
 
 export function buildPass2User(pass1Html: string): string {

@@ -1,0 +1,81 @@
+{
+  "id": "brutalist-v1",
+  "paradigm": "brutalist",
+  "rules": {
+    "layout": {
+      "section_padding": "py-12 md:py-16",
+      "max_width": "max-w-7xl mx-auto",
+      "columns_max": 4,
+      "overlaps_allowed": true,
+      "negative_margin_allowed": true,
+      "full_bleed_allowed": true,
+      "section_transition": "flat"
+    },
+    "typography": {
+      "heading_font": "font-mono",
+      "heading_weight": "font-black",
+      "heading_size_hero": "text-[clamp(3rem,12vw,10rem)]",
+      "heading_size_section": "text-5xl md:text-7xl",
+      "tracking": "tracking-tight",
+      "gradient_text_allowed": false
+    },
+    "color": {
+      "base": "high-contrast",
+      "dark_sections_allowed": true,
+      "gradient_allowed": false,
+      "accent_count_max": 1,
+      "section_bg_sequence": ["background", "dark", "background", "surface"],
+      "bg_animation_mode": "none"
+    },
+    "animation": {
+      "budget": "subtle",
+      "keyframes_allowed": false,
+      "scroll_driven_allowed": false,
+      "text_animations_allowed": [],
+      "hover_effects_allowed": ["offset-shadow-shift"]
+    },
+    "decoration": {
+      "mesh_gradient": false,
+      "glassmorphism": false,
+      "border_glow": false,
+      "geometric_shapes": false,
+      "noise_texture": true,
+      "color_overlays": false,
+      "diagonal_cuts": false,
+      "concave_sections": false
+    }
+  },
+  "forbidden_patterns": [
+    "rounded-* (alle border-radius — nur rounded-none erlaubt)",
+    "shadow-* Tailwind shadows (nur CSS box-shadow offset style)",
+    "bg-gradient-to-*",
+    "backdrop-blur-*",
+    "transition-all duration-300+ (max duration-75)",
+    "glassmorphism / opacity overlays",
+    "smooth easing (ease-in-out verboten — nur linear oder keine)",
+    "font-sans als Heading (nur font-mono oder font-display/grotesque)"
+  ],
+  "required_patterns": [
+    "border-4 oder border-8 auf jedem Card und CTA-Element",
+    "offset box-shadow: style='box-shadow: 4px 4px 0 var(--color-text)' auf Cards und Buttons",
+    "hover shrinks shadow: hover:translate-x-1 hover:translate-y-1 + shadow shrinks to 2px 2px 0",
+    "ALL CAPS für alle Überschriften (uppercase class)",
+    "stark kontrastreiche Sektionen: schwarz auf weiß oder weiß auf schwarz",
+    "alle grids: grid-cols-1 md:grid-cols-X"
+  ],
+  "html_patterns": {
+    "section_wrapper": "<section class=\"relative py-12 md:py-16 border-b-4\" style=\"border-color: var(--color-text)\">",
+    "container": "<div class=\"max-w-7xl mx-auto px-4 md:px-8\">",
+    "eyebrow": "<div class=\"text-xs font-mono font-bold tracking-[0.25em] uppercase mb-4\" style=\"color: var(--color-accent)\">// LABEL</div>",
+    "hero_h1": "<h1 class=\"font-mono font-black uppercase leading-none tracking-tight\" style=\"font-size: clamp(3rem, 12vw, 10rem); line-height: 0.9\">",
+    "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-6 py-3 text-sm font-mono font-bold uppercase tracking-widest border-4 transition-transform duration-75 hover:translate-x-1 hover:translate-y-1\" style=\"border-color: var(--color-text); background-color: var(--color-accent); color: #fff; box-shadow: 4px 4px 0 var(--color-text)\">",
+    "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-6 py-3 text-sm font-mono font-bold uppercase tracking-widest border-4 transition-transform duration-75 hover:translate-x-1 hover:translate-y-1\" style=\"border-color: var(--color-text); background-color: transparent; color: var(--color-text); box-shadow: 4px 4px 0 var(--color-text)\">",
+    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-bold uppercase tracking-widest border-2 transition-transform duration-75 hover:translate-x-0.5 hover:translate-y-0.5\" style=\"border-color: var(--color-text-muted); color: var(--color-text-muted); box-shadow: 2px 2px 0 var(--color-text-muted)\">",
+    "dark_section": "<section class=\"relative py-12 md:py-16 border-b-4\" style=\"background-color: var(--color-dark); border-color: var(--color-accent)\">",
+    "stat_number": "<div class=\"font-mono font-black uppercase leading-none\" style=\"font-size: clamp(2.5rem,8vw,7rem); color: var(--color-accent)\">",
+    "card": "<div class=\"border-4 p-6 relative\" style=\"border-color: var(--color-text); box-shadow: 6px 6px 0 var(--color-text); background-color: var(--color-background)\">",
+    "card_hover": "group-hover:translate-x-1 group-hover:translate-y-1",
+    "card_hover_classes": "transition-transform duration-75",
+    "card_wrapper": "<div class=\"group cursor-pointer\" style=\"--shadow-offset: 6px 6px 0 var(--color-text)\">"
+  }
+}

@@ -8,13 +8,8 @@ import { useBuilderStore, SectionType } from '@/lib/store'
 import { useLogStore } from '@/lib/logStore'
 import { AICallLog, PageContext, ExistingSection } from '@/lib/ai'
 import { AILogPanel } from '@/components/builder/AILogPanel'
+import { PageTabsBar } from '@/components/builder/PageTabsBar'
 import { toast } from 'sonner'
-import { useProjectAutoSave } from '@/hooks/useProjectAutoSave'
-
-function AutoSave() {
-  useProjectAutoSave()
-  return null
-}
 
 function makeRunId(): string {
   return `run-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -76,6 +71,7 @@ export default function BuilderPage() {
     setSectionGenerating,
     setSelectedSection,
     setPagePrompt,
+    pushHistory,
   } = useBuilderStore()
 
   const { logs, stepPauseMode, registerBreakpoint, abortBreakpoint } = useLogStore()
@@ -192,9 +188,11 @@ export default function BuilderPage() {
       // Use the active store page to find which sections to generate.
       // Fall back to the first manifest page if the store page has no slug match.
       const storePage = useBuilderStore.getState().page
-      const manifestPage = manifest.pages.find((p) => p.slug === storePage.slug)
-        ?? manifest.pages.find((p) => p.title === storePage.title)
-        ?? manifest.pages[0]
+      const pageIndex = manifest.pages.findIndex((p) => p.slug === storePage.slug || p.title === storePage.title)
+      const manifestPage = pageIndex !== -1
+        ? manifest.pages[pageIndex]
+        : manifest.pages[0]
+      const effectivePageIndex = pageIndex !== -1 ? pageIndex : 0
       if (!manifestPage) throw new Error('No pages in manifest')
 
       const sectionTypes = manifestPage.sections.length > 0
@@ -220,7 +218,7 @@ export default function BuilderPage() {
             const res = await fetch('/api/v2/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ manifest, sectionType }),
+              body: JSON.stringify({ manifest, sectionType, pageIndex: effectivePageIndex }),
             })
             if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
 
@@ -318,6 +316,10 @@ export default function BuilderPage() {
       writeLog(classifyLog, page.title, prompt)
       toast.info(`Generating ${sectionTypes.length} sections in parallel…`)
 
+      // Snapshot before clearing so user can revert
+      if (useBuilderStore.getState().page.sections.length > 0) {
+        pushHistory(`Before generate: ${prompt.slice(0, 40)}`)
+      }
       // Clear existing sections so re-runs don't accumulate
       useBuilderStore.getState().clearSections()
 
@@ -349,6 +351,7 @@ export default function BuilderPage() {
       )
 
       toast.success('Page generated!')
+      pushHistory(`Generated: ${prompt.slice(0, 50)}`)
       const first = useBuilderStore.getState().page.sections[0]
       if (first) setSelectedSection(first.id)
     } catch (err) {
@@ -374,7 +377,6 @@ export default function BuilderPage() {
       // Always read fresh from store — avoid stale closure if manifest loaded after component mount
       const currentManifest = useBuilderStore.getState().manifest
       if (currentManifest) {
-        console.log('[v2] Using manifest pipeline for', type)
         const res = await fetch('/api/v2/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -430,7 +432,7 @@ export default function BuilderPage() {
     }
   }
 
-  async function handleRegenerate(sectionId: string, customPrompt: string) {
+  async function handleRegenerate(sectionId: string, customPrompt: string, mode: 'full' | 'content-edit' = 'full') {
     const section = page.sections.find((s) => s.id === sectionId)
     if (!section) return
 
@@ -446,6 +448,8 @@ export default function BuilderPage() {
             manifest: currentManifest,
             sectionType: section.type,
             customPrompt: customPrompt || undefined,
+            existingHtml: mode === 'content-edit' ? section.html : undefined,
+            mode,
           }),
         })
         if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
@@ -471,6 +475,7 @@ export default function BuilderPage() {
           }
         }
         toast.success('Section regenerated (v2)')
+        pushHistory(`Regen: ${section.type} — ${(customPrompt || 'no prompt').slice(0, 40)}`)
         return
       }
 
@@ -489,8 +494,8 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
-      <AutoSave />
-      <Topbar />
+            <Topbar />
+      <PageTabsBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar onGenerate={handleGenerate} onAddSection={handleAddSection} />
         <Canvas />
