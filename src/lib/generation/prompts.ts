@@ -188,7 +188,25 @@ Generate the manifest following this exact schema:
 export function buildPass1System(dict: StyleDictionary, manifest: SiteManifest): string {
   const tokens = manifest.design_tokens
   const { layout, typography, color, decoration } = dict.rules
-  const hp = dict.html_patterns
+  // design_spec on the manifest takes precedence over raw dictionary patterns
+  // — it is the per-project override layer
+  const ds = manifest.design_spec
+  const hp: Record<string, string> = {
+    ...dict.html_patterns,
+    // Override CTA patterns from design_spec if present
+    ...(ds?.cta.primary   ? { cta_primary:   ds.cta.primary }   : {}),
+    ...(ds?.cta.secondary ? { cta_secondary: ds.cta.secondary } : {}),
+    ...(ds?.cta.ghost     ? { cta_ghost:     ds.cta.ghost }     : {}),
+    // Override card patterns from design_spec if present
+    ...(ds?.card.base_classes       ? { card:               `<div class="${ds.card.base_classes}">` } : {}),
+    ...(ds?.card.hover_classes      ? { card_hover:          ds.card.hover_classes }                  : {}),
+    ...(ds?.card.transition_classes ? { card_hover_classes:  ds.card.transition_classes }             : {}),
+    ...(ds?.card.wrapper_classes    ? { card_wrapper:        `<div class="${ds.card.wrapper_classes}">` } : {}),
+  }
+
+  // Effective animation settings — design_spec overrides dictionary
+  const effectiveBgMode     = ds?.animation.bg_mode              ?? color.bg_animation_mode  ?? 'none'
+  const effectiveBgSequence = ds?.animation.section_bg_sequence  ?? color.section_bg_sequence ?? ['background', 'surface']
 
   // Build the concrete HTML patterns block from the style dictionary
   const patternsBlock = Object.entries(hp)
@@ -224,7 +242,7 @@ COLOR SYSTEM (${color.base} base):
 - Gradients: ${color.gradient_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
 
 SECTION BACKGROUND RULES (critical — prevents every section looking the same):
-- Background sequence pattern: ${(color.section_bg_sequence ?? ['background', 'surface']).join(' → ')} (cycle through these tokens in order)
+- Background sequence pattern: ${effectiveBgSequence.join(' → ')} (cycle through these tokens in order)
   - "background" → style="background-color: var(--color-background)"
   - "surface"     → style="background-color: var(--color-surface)"
   - "dark"        → style="background-color: var(--color-dark)"
@@ -233,12 +251,12 @@ SECTION BACKGROUND RULES (critical — prevents every section looking the same):
 - Hero is ALWAYS "dark" background regardless of sequence
 - Navbar and footer are EXCLUDED from the sequence (they manage their own bg)
 
-BACKGROUND ANIMATION MODE: ${color.bg_animation_mode ?? 'none'}
-${color.bg_animation_mode === 'page-level'
+BACKGROUND ANIMATION MODE: ${effectiveBgMode}
+${effectiveBgMode === 'page-level'
   ? `- Page-level mode: SVG/geometric background animations belong ONLY in the hero section
 - All other sections use FLAT solid background colors — NO SVG shapes, NO animated bg, NO mesh gradients
 - This prevents the cut-off stacking look when sections are viewed together`
-  : color.bg_animation_mode === 'per-section'
+  : effectiveBgMode === 'per-section'
   ? `- Per-section mode: Each dark section MAY have its own subtle background decoration
 - Keep decorations SMALL (max 20% of section area) and low opacity (≤ 0.08) so they don't dominate
 - Use <!-- [BG: geometric-shapes | opacity: 0.06] --> placeholder — resolved in Pass 2`
@@ -263,6 +281,25 @@ CTA USAGE RULES:
 - NEVER add extra border, box-shadow, shimmer, ring, glow, or gradient to a CTA unless the section is the HERO — in hero only, PRIMARY CTA may add hover shadow: hover:shadow-xl hover:shadow-accent/30
 - NEVER hardcode colors on buttons — always var(--color-accent) or var(--color-primary) via style=""
 - ALL buttons minimum h-11 (py-3 minimum) for touch targets
+
+CARD HOVER SYSTEM (non-negotiable — every hoverable card must use this exact pattern):
+Card base      → ${hp.card ?? `<div class="bg-white border border-gray-100 rounded-sm p-6">`}
+Card wrapper   → ${hp.card_wrapper ?? `<div class="group cursor-pointer">`}
+Hover classes  → add these to the card element: ${(hp.card_hover_classes ?? 'transition-all duration-200 ease-out')} ${hp.card_hover ?? 'group-hover:-translate-y-1 group-hover:shadow-md'}
+
+CARD HOVER RULES:
+- ALL cards that are clickable/interactive MUST use the group/group-hover Tailwind pattern above
+- The card_wrapper div gets class="group cursor-pointer", the inner card div gets the hover classes
+- NEVER use onmouseover JS for hover effects — CSS group-hover only
+- NEVER mix different hover effects on cards in the same section — pick one consistent style
+- Non-interactive cards (purely decorative) should NOT have hover effects
+- The hover transition classes (${hp.card_hover_classes ?? 'transition-all duration-200 ease-out'}) MUST always be present on the card element alongside the group-hover classes
+- Pattern to follow exactly:
+  <div class="group cursor-pointer">
+    <div class="${(hp.card ?? '').replace('<div class="', '').replace('">', '')} ${hp.card_hover_classes ?? 'transition-all duration-200 ease-out'} ${hp.card_hover ?? 'group-hover:-translate-y-1 group-hover:shadow-md'}">
+      <!-- card content -->
+    </div>
+  </div>
 
 FORBIDDEN (never use): ${dict.forbidden_patterns.join(' | ')}
 REQUIRED (always include): ${dict.required_patterns.join(' | ')}

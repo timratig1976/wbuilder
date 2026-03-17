@@ -3,6 +3,7 @@ import { loadStyleDictionary } from '../style/styleDictionary'
 import { findBestSection } from '../sections/sectionLibrary'
 import { provider, MODEL_CONFIG } from '../ai/models'
 import { safeParseJson, applyAutoFixes, sanitizeImagePaths } from './autoFix'
+import { designSpecFromDict } from '../style/styleDictionary'
 import {
   buildPass1System, buildPass1User,
   buildPass2System, buildPass2User,
@@ -299,6 +300,15 @@ export async function generateManifest(input: Parameters<typeof buildManifestPro
       "style='' contains grid/flex — layout in inline style",
       'grid-cols-X without grid-cols-1 — no mobile-first grid',
     ]
+  }
+
+  // Auto-populate design_spec from the resolved style dictionary
+  // This makes component-level design rules first-class manifest data
+  if (!parsed.design_spec && parsed.style_dictionary_ref) {
+    try {
+      const dict = loadStyleDictionary(parsed.style_dictionary_ref)
+      parsed.design_spec = designSpecFromDict(dict)
+    } catch { /* non-fatal if dictionary not found */ }
   }
 
   return parsed

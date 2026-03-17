@@ -9,6 +9,12 @@ import { useLogStore } from '@/lib/logStore'
 import { AICallLog, PageContext, ExistingSection } from '@/lib/ai'
 import { AILogPanel } from '@/components/builder/AILogPanel'
 import { toast } from 'sonner'
+import { useProjectAutoSave } from '@/hooks/useProjectAutoSave'
+
+function AutoSave() {
+  useProjectAutoSave()
+  return null
+}
 
 function makeRunId(): string {
   return `run-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -483,6 +489,7 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
+      <AutoSave />
       <Topbar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar onGenerate={handleGenerate} onAddSection={handleAddSection} />

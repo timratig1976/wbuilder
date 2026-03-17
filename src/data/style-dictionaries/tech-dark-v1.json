@@ -63,6 +63,10 @@
     "glass_card": "<div class=\"backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl shadow-xl p-6\">",
     "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold tracking-wide rounded-lg transition-all duration-200 hover:-translate-y-0.5\" style=\"background-color:var(--color-accent);color:#fff\">",
     "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold tracking-wide rounded-lg border transition-all duration-200 hover:-translate-y-0.5\" style=\"border-color:var(--color-accent);color:var(--color-accent)\">",
-    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-200\" style=\"color:var(--color-text-muted)\">"
+    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-200\" style=\"color:var(--color-text-muted)\">",
+    "card": "<div class=\"backdrop-blur-sm bg-white/5 border border-white/10 rounded-lg p-6\">",
+    "card_hover": "group-hover:-translate-y-1.5 group-hover:bg-white/10 group-hover:border-accent/40 group-hover:shadow-lg group-hover:shadow-accent/10",
+    "card_hover_classes": "transition-all duration-300 ease-out",
+    "card_wrapper": "<div class=\"group cursor-pointer\">"
   }
 }

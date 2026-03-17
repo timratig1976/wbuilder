@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useBuilderStore } from '@/lib/store'
 import { StyleDictionary } from '@/lib/types/styleDictionary'
+import { DesignSpec } from '@/lib/types/manifest'
 import { ArrowLeft, Tag, Save, RotateCcw, Check, ChevronDown, ChevronUp, AlertCircle, Info } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -168,36 +169,49 @@ export default function StyleRulesPage() {
 
   async function handleSave() {
     if (!dict || !manifest) return
-    // Persist to manifest's pass1_prompt_rules as override instructions so AI sees the changes
-    const bgSeq = dict.rules.color.section_bg_sequence ?? []
-    const bgMode = dict.rules.color.bg_animation_mode ?? 'none'
-    const animBudget = dict.rules.animation.budget
-    const forbidden = dict.forbidden_patterns
-    const required = dict.required_patterns
+    const hp = dict.html_patterns
 
-    // Inject rules into manifest.pass1_prompt_rules so they affect generation
-    const newManifest = {
-      ...manifest,
-      pass1_prompt_rules: {
-        rules: [
-          ...manifest.pass1_prompt_rules.rules.filter((r) =>
-            !r.startsWith('BG_SEQUENCE:') &&
-            !r.startsWith('BG_ANIMATION:') &&
-            !r.startsWith('ANIMATION_BUDGET:') &&
-            !r.startsWith('FORBIDDEN:') &&
-            !r.startsWith('REQUIRED:')
-          ),
-          `BG_SEQUENCE: ${bgSeq.join(' → ')}`,
-          `BG_ANIMATION: ${bgMode}`,
-          `ANIMATION_BUDGET: ${animBudget}`,
-          ...forbidden.map((f) => `FORBIDDEN: ${f}`),
-          ...required.map((r) => `REQUIRED: ${r}`),
-        ],
+    // Build DesignSpec from current dict state — this is the per-project override layer
+    const cardRadiusMatch = (hp.card ?? '').match(/rounded-([a-z0-9[\]/.]+)/)
+    const cardRadius = cardRadiusMatch ? `rounded-${cardRadiusMatch[1]}` : 'rounded-sm'
+    const btnRadiusMatch = (hp.cta_primary ?? '').match(/rounded-([a-z0-9[\]/.]+)/)
+    const btnRadius = btnRadiusMatch ? `rounded-${btnRadiusMatch[1]}` : cardRadius
+    const shadowMatch = (hp.card_hover ?? '').match(/group-hover:(shadow-[^\s]+)/)
+    const hoverShadow = shadowMatch ? shadowMatch[1] : 'shadow-md'
+
+    const designSpec: DesignSpec = {
+      card: {
+        base_classes:       hp.card?.replace(/^<div class="/, '').replace(/".*$/, '') ?? '',
+        hover_classes:      hp.card_hover ?? '',
+        transition_classes: hp.card_hover_classes ?? 'transition-all duration-200 ease-out',
+        wrapper_classes:    hp.card_wrapper?.replace(/^<div class="/, '').replace(/".*$/, '') ?? 'group cursor-pointer',
+      },
+      cta: {
+        primary:   hp.cta_primary   ?? '',
+        secondary: hp.cta_secondary ?? '',
+        ghost:     hp.cta_ghost     ?? '',
+      },
+      border_radius: {
+        card:   cardRadius,
+        button: btnRadius,
+        input:  manifest.design_spec?.border_radius.input   ?? 'rounded-lg',
+        badge:  manifest.design_spec?.border_radius.badge   ?? 'rounded-full',
+      },
+      shadow: {
+        card_rest:  manifest.design_spec?.shadow.card_rest  ?? 'shadow-none',
+        card_hover: hoverShadow,
+        dropdown:   manifest.design_spec?.shadow.dropdown   ?? 'shadow-xl',
+      },
+      animation: {
+        budget:               dict.rules.animation.budget,
+        bg_mode:              dict.rules.color.bg_animation_mode  ?? 'none',
+        section_bg_sequence:  dict.rules.color.section_bg_sequence ?? ['background', 'surface'],
       },
     }
-    setManifest(newManifest)
 
-    // Also persist to the style dictionary file via API
+    setManifest({ ...manifest, design_spec: designSpec })
+
+    // Also persist the style dictionary file so defaults stay in sync
     try {
       await fetch('/api/style-dictionary', {
         method: 'POST',
@@ -209,7 +223,7 @@ export default function StyleRulesPage() {
     setOriginal(JSON.parse(JSON.stringify(dict)))
     setDirty(false)
     setSaved(true)
-    toast.success('Style rules saved & injected into manifest')
+    toast.success('Design spec saved to manifest — takes effect on next generation')
     setTimeout(() => setSaved(false), 3000)
   }
 
@@ -554,6 +568,55 @@ export default function StyleRulesPage() {
                 })}
               </div>
               <p className="text-[10px] text-rose-400 mt-2">Note: Colors require CSS vars — preview may show defaults</p>
+            </div>
+          </RuleSection>
+
+          {/* ── Card Hover System ── */}
+          <RuleSection title="Card Hover System" color="#0ea5e9" subtitle="Consistent hover behaviour for every interactive card — applied page-wide">
+            {([
+              ['card',              'Card base HTML',    'The inner card element with background, border, padding'],
+              ['card_wrapper',     'Card wrapper HTML',  'Outer div that gets class="group" for CSS group-hover'],
+              ['card_hover',       'Hover classes',      'group-hover:* classes added to the card element on hover'],
+              ['card_hover_classes','Transition classes', 'duration/easing applied to the card at all times'],
+            ] as [string, string, string][]).map(([key, label, hint]) => (
+              <FieldRow key={key} label={label} description={hint}>
+                <input
+                  value={dict.html_patterns[key] ?? ''}
+                  onChange={(e) => {
+                    const next = { ...dict, html_patterns: { ...dict.html_patterns, [key]: e.target.value } }
+                    setDict(next); setDirty(true)
+                  }}
+                  className="w-full text-xs font-mono border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                  placeholder={key === 'card_hover' ? 'group-hover:-translate-y-1 group-hover:shadow-md' : key === 'card_hover_classes' ? 'transition-all duration-200 ease-out' : ''}
+                />
+              </FieldRow>
+            ))}
+
+            {/* Live visual preview */}
+            <div className="mt-3 p-4 bg-sky-50 border border-sky-100 rounded-lg">
+              <p className="text-[10px] text-sky-600 font-medium mb-3">Live pattern preview — hover the card</p>
+              <style>{`
+                .card-preview-wrapper:hover .card-preview-inner {
+                  transform: translateY(-4px);
+                  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                }
+                .card-preview-inner { transition: all 0.2s ease-out; }
+              `}</style>
+              <div className="card-preview-wrapper inline-block cursor-pointer">
+                <div className="card-preview-inner bg-white border border-gray-200 rounded-lg p-5 w-48">
+                  <div className="w-8 h-8 rounded-md mb-3" style={{ backgroundColor: 'var(--color-accent, #6366f1)' }} />
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Card Title</p>
+                  <p className="text-xs text-gray-400">Supporting text here</p>
+                </div>
+              </div>
+              <div className="mt-3 space-y-1.5">
+                <p className="text-[10px] text-sky-700 font-semibold">How it works in generated HTML:</p>
+                <pre className="text-[10px] text-gray-500 bg-white border border-gray-100 rounded p-2 overflow-x-auto leading-relaxed">{`<div class="group cursor-pointer">   ← card_wrapper
+  <div class="[card] [card_hover_classes] [card_hover]">
+    <!-- content -->
+  </div>
+</div>`}</pre>
+              </div>
             </div>
           </RuleSection>
 

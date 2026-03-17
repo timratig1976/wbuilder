@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useBuilderStore, BrandStyle } from '@/lib/store'
 import { useLogStore } from '@/lib/logStore'
@@ -686,6 +686,118 @@ function NavBtn({
   return <button onClick={onClick} disabled={disabled} className={cls}>{children}</button>
 }
 
+// ── Open Project drawer (server-saved projects) ───────────────────────────
+
+interface ServerProjectMeta {
+  id: string; name: string; updatedAt: number; createdAt: number
+  sectionCount: number; paradigm: string | null; company: string | null
+}
+
+function OpenProjectDrawer({ onClose }: { onClose: () => void }) {
+  const { setManifest } = useBuilderStore()
+  const [projects, setProjects] = useState<ServerProjectMeta[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+
+  function fmt(ts: number) {
+    return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  useEffect(() => {
+    fetch('/api/projects')
+      .then((r) => r.json())
+      .then((data) => { setProjects(data ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  async function handleLoad(id: string, name: string) {
+    if (!confirm(`Load "${name}"? Unsaved changes to the current project will be lost.`)) return
+    setLoadingId(id)
+    try {
+      const res = await fetch(`/api/projects/${id}`)
+      if (!res.ok) { toast.error('Project not found on server'); return }
+      const project = await res.json()
+      // Inject into savedProjects then load
+      useBuilderStore.setState((s) => ({
+        savedProjects: [project, ...s.savedProjects.filter((p) => p.id !== project.id)],
+      }))
+      useBuilderStore.getState().loadProject(project.id)
+      if (project.manifest) setManifest(project.manifest)
+      toast.success(`"${name}" loaded`)
+      onClose()
+    } catch { toast.error('Failed to load project') }
+    finally { setLoadingId(null) }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete "${name}" from server? This cannot be undone.`)) return
+    try {
+      await fetch(`/api/projects/${id}`, { method: 'DELETE' })
+      setProjects((p) => p.filter((x) => x.id !== id))
+      toast.success(`"${name}" deleted`)
+    } catch { toast.error('Delete failed') }
+  }
+
+  return (
+    <div className="absolute top-14 left-0 z-50 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <span className="font-semibold text-gray-900 text-sm flex items-center gap-1.5">
+          <Library className="w-4 h-4 text-indigo-500" /> Saved Projects
+        </span>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+      </div>
+
+      <div className="max-h-96 overflow-y-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-10 gap-2 text-gray-400 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="text-center py-10 px-4">
+            <p className="text-sm text-gray-500 font-medium">No saved projects yet</p>
+            <p className="text-xs text-gray-400 mt-1">Projects auto-save to the server after you generate content.</p>
+          </div>
+        ) : (
+          projects
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .map((p) => (
+              <div key={p.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-gray-900 truncate">{p.name || 'Untitled'}</p>
+                  {p.company && <p className="text-[11px] text-indigo-600 font-medium truncate">{p.company}</p>}
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {fmt(p.updatedAt)} · {p.sectionCount} section{p.sectionCount !== 1 ? 's' : ''}
+                    {p.paradigm && <span className="ml-1 px-1 bg-gray-100 rounded text-[10px]">{p.paradigm}</span>}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                  <button
+                    onClick={() => handleLoad(p.id, p.name)}
+                    disabled={loadingId === p.id}
+                    className="text-[11px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2.5 py-1 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {loadingId === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                    Open
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.id, p.name)}
+                    className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+        )}
+      </div>
+
+      <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
+        <p className="text-[10px] text-gray-400">Projects auto-save 2s after changes · stored in <span className="font-mono">src/data/projects/</span></p>
+      </div>
+    </div>
+  )
+}
+
 function Divider() {
   return <div className="w-px h-4 bg-gray-200 mx-1 flex-shrink-0" />
 }
@@ -693,11 +805,12 @@ function Divider() {
 // ── Main Topbar ────────────────────────────────────────────────────────────
 
 export function Topbar() {
-  const { page, project, manifest, generating, clearSections, saveProject, newProject } = useBuilderStore()
+  const { page, project, manifest, generating, clearSections, saveProject, newProject, setManifest } = useBuilderStore()
   const { logs } = useLogStore()
   const [showSitemap, setShowSitemap] = useState(false)
   const [showManifest, setShowManifest] = useState(false)
   const [showPatterns, setShowPatterns] = useState(false)
+  const [showOpen, setShowOpen] = useState(false)
 
   const runCostEur = calcRunCost(logs)
   const hasBrand = Object.values(project.brand).some((v) => v.trim() !== '')
@@ -732,6 +845,51 @@ export function Topbar() {
   function handleClear() {
     if (page.sections.length === 0) return
     if (confirm('Clear all sections on this page?')) { clearSections(); toast.success('Page cleared') }
+  }
+
+  const importRef = useRef<HTMLInputElement>(null)
+
+  function handleExportJson() {
+    const payload = { ...project, manifest: manifest ?? project.manifest }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const slug = (project.name || 'project').replace(/\s+/g, '-').toLowerCase()
+    a.download = `${slug}-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Project exported as JSON')
+  }
+
+  function handleImportJson(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string)
+        if (!parsed?.id || !parsed?.pages) { toast.error('Invalid project file'); return }
+        // Save into savedProjects and load it
+        useBuilderStore.getState().saveProject()
+        setManifest(parsed.manifest ?? null)
+        // Load by writing directly into store
+        const store = useBuilderStore.getState()
+        store.loadProject(parsed.id)
+        // If not already in savedProjects, inject it first
+        const already = useBuilderStore.getState().savedProjects.find((p) => p.id === parsed.id)
+        if (!already) {
+          // Manually inject the imported project then load it
+          useBuilderStore.setState((s) => ({
+            savedProjects: [parsed, ...s.savedProjects.filter((p) => p.id !== parsed.id)],
+          }))
+          useBuilderStore.getState().loadProject(parsed.id)
+        }
+        toast.success(`Project "${parsed.name}" imported`)
+      } catch { toast.error('Failed to parse project JSON') }
+    }
+    reader.readAsText(file)
+    e.target.value = '' // allow re-import same file
   }
 
   return (
@@ -845,6 +1003,14 @@ export function Topbar() {
           New
         </NavBtn>
 
+        <div className="relative">
+          <NavBtn onClick={() => setShowOpen(!showOpen)} active={showOpen}>
+            <Library className="w-3.5 h-3.5" />
+            Open
+          </NavBtn>
+          {showOpen && <OpenProjectDrawer onClose={() => setShowOpen(false)} />}
+        </div>
+
         <NavBtn onClick={handleSave}>
           <Save className="w-3.5 h-3.5" />
           Save
@@ -868,6 +1034,27 @@ export function Topbar() {
 
       <Divider />
 
+      {/* ── JSON Export / Import ── */}
+      <div className="flex items-center gap-0.5">
+        <NavBtn onClick={handleExportJson} disabled={page.sections.length === 0}>
+          <FileJson className="w-3.5 h-3.5" />
+          Save JSON
+        </NavBtn>
+        <NavBtn onClick={() => importRef.current?.click()}>
+          <FilePlus className="w-3.5 h-3.5" />
+          Load JSON
+        </NavBtn>
+        <input
+          ref={importRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={handleImportJson}
+        />
+      </div>
+
+      <Divider />
+
       {/* ── Primary CTA ── */}
       <NavBtn onClick={handleExport} variant="primary" disabled={page.sections.length === 0}>
         <Download className="w-3.5 h-3.5" />
@@ -875,6 +1062,7 @@ export function Topbar() {
       </NavBtn>
 
       {/* ── Overlays ── */}
+      {showOpen    && <div className="fixed inset-0 z-40" onClick={() => setShowOpen(false)} />}
       {showSitemap && <div className="fixed inset-0 z-40" onClick={() => setShowSitemap(false)} />}
 
       {showManifest && manifest && (

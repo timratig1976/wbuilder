@@ -64,6 +64,10 @@
     "hero_h1": "<h1 class=\"font-display font-light text-5xl md:text-7xl tracking-tight leading-none\">",
     "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-8 py-4 text-sm font-medium rounded-sm transition-opacity hover:opacity-90\" style=\"background-color:var(--color-primary);color:#fff\">",
     "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-8 py-4 text-sm font-medium rounded-sm border transition-opacity hover:opacity-70\" style=\"border-color:var(--color-primary);color:var(--color-primary)\">",
-    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors\" style=\"color:var(--color-text-muted)\">"
+    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors\" style=\"color:var(--color-text-muted)\">",
+    "card": "<div class=\"bg-white border border-gray-100 rounded-sm p-6\">",
+    "card_hover": "group-hover:-translate-y-1 group-hover:shadow-md",
+    "card_hover_classes": "transition-all duration-200 ease-out",
+    "card_wrapper": "<div class=\"group cursor-pointer\">"
   }
 }

@@ -30,6 +30,36 @@ export interface DesignTokens {
   }
 }
 
+export interface DesignSpec {
+  card: {
+    base_classes: string          // bg, border, padding, radius
+    hover_classes: string         // group-hover:* classes
+    transition_classes: string    // transition-all duration-* ease-*
+    wrapper_classes: string       // outer group div classes
+  }
+  cta: {
+    primary: string               // full opening tag HTML
+    secondary: string
+    ghost: string
+  }
+  border_radius: {
+    card: string                  // e.g. rounded-xl
+    button: string                // e.g. rounded-sm
+    input: string                 // e.g. rounded-lg
+    badge: string                 // e.g. rounded-full
+  }
+  shadow: {
+    card_rest: string             // e.g. shadow-sm
+    card_hover: string            // e.g. shadow-xl shadow-accent/20
+    dropdown: string              // e.g. shadow-xl
+  }
+  animation: {
+    budget: 'none' | 'subtle' | 'moderate' | 'rich'
+    bg_mode: 'none' | 'per-section' | 'page-level'
+    section_bg_sequence: string[]
+  }
+}
+
 export interface SiteManifest {
   id: string; version: string
   site: {
@@ -58,6 +88,7 @@ export interface SiteManifest {
     primary_cta: string; secondary_cta: string
     personas: string[]; pain_points: string[]; trust_signals: string[]
   }
+  design_spec?: DesignSpec
   generated_at: string
   _decision_log: Record<string, string>
   selected_patterns?: Array<{

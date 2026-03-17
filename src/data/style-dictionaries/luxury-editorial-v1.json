@@ -62,6 +62,10 @@
     "accent_line": "<div class=\"w-8 h-px bg-accent mb-8\"></div>",
     "cta_primary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-8 py-4 text-sm font-medium tracking-wide transition-opacity hover:opacity-80\" style=\"background-color:var(--color-primary);color:#fff\">",
     "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-8 py-4 text-sm font-medium tracking-wide border transition-opacity hover:opacity-70\" style=\"border-color:var(--color-primary);color:var(--color-primary)\">",
-    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors\" style=\"color:var(--color-text-muted)\">"
+    "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors\" style=\"color:var(--color-text-muted)\">",
+    "card": "<div class=\"bg-white border border-gray-100 p-8\">",
+    "card_hover": "group-hover:-translate-y-0.5 group-hover:shadow-sm group-hover:border-gray-300",
+    "card_hover_classes": "transition-all duration-300 ease-out",
+    "card_wrapper": "<div class=\"group cursor-pointer\">"
   }
 }

@@ -66,6 +66,10 @@
     "cta_secondary": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold tracking-wide rounded-sm border transition-all duration-200 hover:-translate-y-0.5\" style=\"border-color:var(--color-accent);color:var(--color-accent)\">",
     "cta_ghost": "<a href=\"#\" class=\"inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-200\" style=\"color:var(--color-text-muted)\">",
     "dark_section": "<section class=\"relative overflow-hidden isolate bg-primary py-16 md:py-24\">",
-    "stat_number": "<div class=\"font-display font-bold text-4xl md:text-5xl text-accent leading-none\" data-target=\"NUMBER\">"
+    "stat_number": "<div class=\"font-display font-bold text-4xl md:text-5xl text-accent leading-none\" data-target=\"NUMBER\">",
+    "card": "<div class=\"bg-white/5 border border-white/10 rounded-sm p-6\">",
+    "card_hover": "group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-accent/20 group-hover:border-accent/30",
+    "card_hover_classes": "transition-all duration-300 ease-out",
+    "card_wrapper": "<div class=\"group cursor-pointer\">"
   }
 }
