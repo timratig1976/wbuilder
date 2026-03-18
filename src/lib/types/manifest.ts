@@ -80,6 +80,8 @@ export interface SiteManifest {
   style_source: { type: string; url?: string; confidence?: number }
   navbar: {
     style: 'sticky-blur'|'static'|'transparent-hero'|'hidden-scroll'
+    behaviour: 'sticky'|'overlay-hero'|'hide-on-scroll'|'static'
+    visual: 'blur'|'solid'|'transparent'|'border'
     scroll_threshold_px: number; height: string
     layout_desktop: string; mobile_menu: string
     cta_button: boolean; cta_label: string; links: string[]
@@ -97,13 +99,20 @@ export interface SiteManifest {
     personas: string[]; pain_points: string[]; trust_signals: string[]
   }
   design_spec?: DesignSpec
+  logo_url?: string
   generated_at: string
   _decision_log: Record<string, string>
   selected_patterns?: Array<{
     id: string; name: string; description: string; type: string
     preview_description?: string
-    implementation?: { css_snippet?: string; html_snippet?: string; placeholder?: string }
+    applicable_sections?: string[]
+    implementation?: { css_snippet?: string; html_snippet?: string; placeholder?: string; navbar_behaviour?: string; navbar_layout?: string; navbar_structure?: string; navbar_mobile?: string }
   }>
+  section_patterns?: Record<string, Array<{
+    id: string; name: string; description: string; type: string
+    preview_description?: string
+    implementation?: { css_snippet?: string; html_snippet?: string; placeholder?: string; navbar_behaviour?: string; navbar_layout?: string; navbar_structure?: string; navbar_mobile?: string }
+  }>>
 }
 
 export interface ValidationError {

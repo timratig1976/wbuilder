@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLogStore, AICallLog, AICallPass } from '@/lib/logStore'
 import {
   Bot, ChevronDown, ChevronRight, ChevronLeft, Trash2, Clock,
@@ -197,9 +197,18 @@ export function AILogPanel() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [filter, setFilter] = useState<AICallPass | 'all'>('all')
+  const prevLogCountRef = useRef(0)
 
   const filtered = filter === 'all' ? logs : logs.filter((l) => l.pass === filter)
   const activeCount = logs.filter((l) => l.status === 'streaming' || l.status === 'pending').length
+
+  // Auto-expand when a new log arrives (e.g. section regeneration starts)
+  useEffect(() => {
+    if (logs.length > prevLogCountRef.current && collapsed) {
+      setCollapsed(false)
+    }
+    prevLogCountRef.current = logs.length
+  }, [logs.length, collapsed])
   const hasPauses = activePauses.length > 0
 
   // Collapsed: show just a slim toggle strip

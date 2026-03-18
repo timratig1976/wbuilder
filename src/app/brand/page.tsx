@@ -38,15 +38,12 @@ const RADIUS_OPTIONS = [
   { label: 'Pill', value: 'rounded-full', preview: 'rounded-full' },
 ]
 
-const TONE_OPTIONS = [
-  { label: 'Minimal & Clean', value: 'minimal and clean' },
-  { label: 'Bold & Impactful', value: 'bold and impactful' },
-  { label: 'Corporate & Professional', value: 'corporate and professional' },
-  { label: 'Playful & Friendly', value: 'playful and friendly' },
-  { label: 'Luxury & Premium', value: 'luxury and premium' },
-  { label: 'Tech & Futuristic', value: 'tech and futuristic' },
-  { label: 'Warm & Approachable', value: 'warm and approachable' },
-  { label: 'Creative & Artistic', value: 'creative and artistic' },
+const TONE_OPTIONS: { label: string; value: string; desc: string }[] = [
+  { label: 'Whisper',     value: 'whisper',    desc: 'Subtle & quiet — generous whitespace, minimal decoration' },
+  { label: 'Editorial',  value: 'editorial',  desc: 'Structured & formal — serif-forward, controlled color' },
+  { label: 'Confident',  value: 'confident',  desc: 'Balanced & clear — standard contrast, moderate animation' },
+  { label: 'Expressive', value: 'expressive', desc: 'Bold & energetic — heavy typography, rich decoration' },
+  { label: 'Electric',   value: 'electric',   desc: 'Maximum energy — vibrant, loud, full animation' },
 ]
 
 const COLOR_PRESETS = [
@@ -441,6 +438,7 @@ function buildBrandInstruction(brand: BrandStyle): string {
   if (brand.borderRadius)    parts.push(`button and card shape: ${brand.borderRadius}`)
   if (brand.tone) parts.push(`visual tone: ${brand.tone}`)
   if (brand.extraNotes) parts.push(brand.extraNotes)
+  if (parts.length === 0) return ''
   return `Apply this brand style consistently across the section: ${parts.join(', ')}`
 }
 
@@ -456,7 +454,7 @@ function timeAgo(ts: number): string {
 
 export default function BrandPage() {
   const {
-    project, manifest, setBrand,
+    project, manifest, setBrand, setManifest,
     snapshotAllSections, revertAllSections,
     pushHistory, revertToHistory, clearHistory,
     updateSectionHtmlAcrossPages,
@@ -478,7 +476,7 @@ export default function BrandPage() {
     fontFamily:      manifest.design_tokens.typography.font_heading,
     fontBody:        manifest.design_tokens.typography.font_body,
     headingWeight:   manifest.design_tokens.typography.heading_weight,
-    tone:            manifest.site.tone,
+    tone:            manifest.visual_tone ?? manifest.site.tone,
   } : project.brand
 
   const [applying, setApplying] = useState(false)
@@ -487,6 +485,10 @@ export default function BrandPage() {
   const [showHistory, setShowHistory] = useState(false)
   function update(key: keyof BrandStyle, value: string) {
     setBrand({ [key]: value })
+    // When tone changes, also update manifest.visual_tone so generation pipeline uses it
+    if (key === 'tone' && manifest) {
+      setManifest({ ...manifest, visual_tone: value as import('@/lib/types/manifest').VisualTone })
+    }
   }
 
   const totalSections = project.pages.reduce((sum, p) => sum + p.sections.length, 0)
@@ -497,18 +499,26 @@ export default function BrandPage() {
   // ── Apply Brand via AI (constrained) ─────────────────────────────────────
   const handleApplyBrand = useCallback(async () => {
     const instruction = buildBrandInstruction(brand)
-    if (!instruction.trim() || totalSections === 0) {
-      toast.error('No brand settings or sections to apply to')
+    if (!instruction) {
+      toast.error('No brand settings configured — set at least one color or font first')
+      return
+    }
+    if (totalSections === 0) {
+      toast.error('No sections to apply brand to — generate a page first')
       return
     }
     pushHistory('Before AI brand apply')
     snapshotAllSections()
     setApplying(true)
     setHasApplied(false)
+    // Skip navbar + footer — chrome sections with complex JS that style-edit AI truncates
     const allTasks: Array<{ pageId: string; sectionId: string; html: string }> = []
-    project.pages.forEach((p) => p.sections.forEach((sec) => allTasks.push({ pageId: p.id, sectionId: sec.id, html: sec.html })))
+    project.pages.forEach((p) => p.sections.forEach((sec) => {
+      if (sec.type === 'navbar' || sec.type === 'footer') return
+      allTasks.push({ pageId: p.id, sectionId: sec.id, html: sec.html })
+    }))
     setProgress({ done: 0, total: allTasks.length })
-    toast.info(`Applying brand to ${allTasks.length} sections…`)
+    toast.info(`Applying brand to ${allTasks.length} sections (navbar + footer skipped)…`)
 
     let successCount = 0
     await Promise.all(
@@ -526,7 +536,9 @@ export default function BrandPage() {
             updateSectionHtmlAcrossPages(pageId, sectionId, data.html)
             successCount++
           }
-        } catch { /* skip */ } finally {
+        } catch (err) {
+          console.error('Brand apply failed for section', sectionId, err)
+        } finally {
           setProgress((p) => ({ ...p, done: p.done + 1 }))
         }
       })
@@ -614,7 +626,7 @@ export default function BrandPage() {
           {/* Apply brand via AI (constrained) */}
           <Button
             onClick={handleApplyBrand}
-            disabled={applying || totalSections === 0 || completedFields === 0}
+            disabled={applying || totalSections === 0 || !buildBrandInstruction(brand)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm gap-1.5"
           >
             {applying ? (
@@ -782,28 +794,60 @@ export default function BrandPage() {
           </CollapsibleSection>
 
           {/* Navbar section */}
-          <CollapsibleSection icon={<LayoutTemplate className="w-4 h-4 text-blue-500" />} title="Navbar" color="#3b82f6" badge={manifest?.navbar?.style || undefined}>
+          <CollapsibleSection icon={<LayoutTemplate className="w-4 h-4 text-blue-500" />} title="Navbar" color="#3b82f6" badge={manifest?.navbar?.behaviour || manifest?.navbar?.style || undefined}>
             <div className="space-y-4">
-              {/* Navbar Style */}
+              {/* Navbar Behaviour */}
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Navbar Style</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Verhalten</label>
+                <p className="text-[10px] text-gray-400 mb-2">Wie bewegt sich die Navbar beim Scrollen?</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'sticky-blur', label: 'Sticky Blur', desc: 'Stays fixed with blur effect' },
-                    { value: 'static', label: 'Static', desc: 'Normal scroll behavior' },
-                    { value: 'transparent-hero', label: 'Transparent Hero', desc: 'Transparent over hero' },
-                    { value: 'hidden-scroll', label: 'Hide on Scroll', desc: 'Hides when scrolling down' },
+                    { value: 'sticky',         label: 'Sticky',        desc: 'Immer oben fixiert' },
+                    { value: 'overlay-hero',   label: 'Overlay Hero',  desc: 'Über dem Hero, dann sticky' },
+                    { value: 'hide-on-scroll', label: 'Auto-Hide',     desc: 'Versteckt beim Runterscrollen' },
+                    { value: 'static',         label: 'Static',        desc: 'Scrollt mit der Seite' },
                   ].map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => {
                         if (manifest) {
-                          const newManifest = { ...manifest, navbar: { ...manifest.navbar, style: opt.value as any } }
+                          const newManifest = { ...manifest, navbar: { ...manifest.navbar, behaviour: opt.value as any } }
                           useBuilderStore.getState().setManifest(newManifest)
                         }
                       }}
                       className={`flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
-                        manifest?.navbar?.style === opt.value
+                        (manifest?.navbar?.behaviour ?? 'sticky') === opt.value
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-xs font-semibold text-gray-800">{opt.label}</span>
+                      <span className="text-[10px] text-gray-500">{opt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Navbar Visual */}
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Look</label>
+                <p className="text-[10px] text-gray-400 mb-2">Wie sieht die Navbar aus?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'blur',        label: 'Blur',        desc: 'Glassmorphism Hintergrund' },
+                    { value: 'solid',       label: 'Solid',       desc: 'Voller Hintergrund' },
+                    { value: 'transparent', label: 'Transparent', desc: 'Kein Hintergrund' },
+                    { value: 'border',      label: 'Border',      desc: 'Solid + Trennlinie' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        if (manifest) {
+                          const newManifest = { ...manifest, navbar: { ...manifest.navbar, visual: opt.value as any } }
+                          useBuilderStore.getState().setManifest(newManifest)
+                        }
+                      }}
+                      className={`flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+                        (manifest?.navbar?.visual ?? 'blur') === opt.value
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50'
                       }`}
@@ -855,18 +899,20 @@ export default function BrandPage() {
 
           {/* Tone section */}
           <CollapsibleSection icon={<Sparkles className="w-4 h-4 text-amber-500" />} title="Visual Tone" color="#f59e0b" badge={brand.tone || undefined} defaultOpen>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="text-[10px] text-gray-400 mb-3 leading-relaxed">Controls generation intensity — whitespace, decoration density, animation energy. Applied to all future section generation.</p>
+            <div className="flex flex-col gap-2">
               {TONE_OPTIONS.map((t) => (
                 <button
                   key={t.value}
                   onClick={() => update('tone', t.value)}
-                  className={`px-3 py-2.5 rounded-xl border-2 text-xs font-medium text-left transition-all ${
+                  className={`px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
                     brand.tone === t.value
-                      ? 'border-amber-400 bg-amber-50 text-amber-800'
-                      : 'border-gray-100 text-gray-600 hover:border-amber-200 hover:bg-gray-50'
+                      ? 'border-amber-400 bg-amber-50'
+                      : 'border-gray-100 hover:border-amber-200 hover:bg-gray-50'
                   }`}
                 >
-                  {t.label}
+                  <span className={`text-xs font-semibold block ${brand.tone === t.value ? 'text-amber-800' : 'text-gray-700'}`}>{t.label}</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5 block">{t.desc}</span>
                 </button>
               ))}
             </div>

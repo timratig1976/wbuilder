@@ -57,6 +57,13 @@ export function Canvas() {
   const sectionCount = sections.length
   const sectionIds = sections.map((s) => s.id).join(',')
 
+  // Stable key for manifest fields that actually affect rendered CSS.
+  // Deliberately excludes section_patterns, selected_patterns, etc. so that
+  // toggling pattern overrides in PropertiesPanel does NOT trigger an iframe rewrite.
+  const manifestVisualKey = manifest
+    ? JSON.stringify(manifest.design_tokens)
+    : 'null'
+
   // Full rewrite when section list structure or preview mode changes
   useEffect(() => {
     const iframe = iframeRef.current
@@ -97,7 +104,7 @@ export function Canvas() {
     iframe.addEventListener('load', afterWrite, { once: true })
     afterWrite()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sectionCount, sectionIds, previewMode, manifest])
+  }, [sectionCount, sectionIds, previewMode, manifestVisualKey])
 
   // Surgically update base styles (CSS vars + token utility classes) when manifest changes
   // (without triggering a full iframe rewrite that would flicker the page)
@@ -152,6 +159,53 @@ export function Canvas() {
     // Re-measure after content changes so sticky still works
     const iframeEl = iframeRef.current
     if (iframeEl) setTimeout(() => autoResizeIframe(iframeEl), 50)
+  }, [sections])
+
+  // Spinner overlay — inject/remove a loading overlay inside the iframe over each generating section
+  // Other sections are completely untouched — only the target section gets a grey overlay + spinner
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!doc?.body) return
+
+    sections.forEach((s) => {
+      const el = doc.querySelector<HTMLElement>(`[data-section-id="${s.id}"]`)
+      if (!el) return
+      const overlayId = `__regen-overlay-${s.id}`
+      const existing = doc.getElementById(overlayId)
+
+      if (s.generating) {
+        if (existing) return // already injected
+        // Make wrapper relative so the overlay can be absolutely positioned over it
+        el.style.position = 'relative'
+        const overlay = doc.createElement('div')
+        overlay.id = overlayId
+        overlay.setAttribute('style', [
+          'position:absolute', 'inset:0', 'z-index:9999',
+          'background:rgba(255,255,255,0.72)',
+          'backdrop-filter:blur(2px)',
+          '-webkit-backdrop-filter:blur(2px)',
+          'display:flex', 'align-items:center', 'justify-content:center',
+          'pointer-events:all',
+        ].join(';'))
+        overlay.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:__spin 0.8s linear infinite">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <span style="font-size:11px;font-weight:600;color:#6366f1;font-family:sans-serif;letter-spacing:0.04em">Regenerating…</span>
+          </div>
+          <style>@keyframes __spin{to{transform:rotate(360deg)}}</style>`
+        el.appendChild(overlay)
+      } else {
+        // Remove overlay when done
+        if (existing) {
+          existing.remove()
+          el.style.position = ''
+        }
+      }
+    })
   }, [sections])
 
   // Sync selected section highlight into iframe

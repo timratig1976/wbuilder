@@ -1,14 +1,125 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useBuilderStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { RefreshCw, Code2, X, Loader2, Wand2, Paintbrush } from 'lucide-react'
+import { RefreshCw, Code2, X, Loader2, Wand2, Paintbrush, Library, ChevronDown, Check } from 'lucide-react'
 import { toast } from 'sonner'
+
+interface PatternEntry {
+  id: string; name: string; description: string; type: string
+  preview_description?: string; applicable_sections?: string[]
+  implementation?: { css_snippet?: string; html_snippet?: string; placeholder?: string }
+}
+
+function SectionPatternPicker({ sectionType }: { sectionType: string }) {
+  const { manifest, updateSectionPatterns } = useBuilderStore()
+  const [patterns, setPatterns] = useState<PatternEntry[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  const active = manifest?.section_patterns?.[sectionType] ?? []
+  const activeIds = new Set(active.map((p) => p.id))
+  const globalIds = new Set((manifest?.selected_patterns ?? []).map((p) => p.id))
+
+  function load() {
+    if (loaded) return
+    setLoading(true)
+    fetch('/api/v2/discovery?view=patterns')
+      .then((r) => r.json())
+      .then((d) => {
+        const all: PatternEntry[] = d.patterns ?? []
+        const relevant = all.filter((p) => {
+          const s = p.applicable_sections
+          if (!s || s.includes('*')) return true
+          return s.includes(sectionType)
+        })
+        setPatterns(relevant)
+        setLoaded(true)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }
+
+  function toggle(p: PatternEntry) {
+    const next = activeIds.has(p.id)
+      ? active.filter((a) => a.id !== p.id)
+      : [...active, { id: p.id, name: p.name, description: p.description, type: p.type, preview_description: p.preview_description, implementation: p.implementation }]
+    updateSectionPatterns(sectionType, next)
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors"
+        onClick={() => { setOpen(!open); if (!open) load() }}
+      >
+        <div className="flex items-center gap-2">
+          <Library className="w-3.5 h-3.5 text-violet-500" />
+          <span className="text-xs font-semibold text-gray-700">Pattern Overrides</span>
+          {active.length > 0 && (
+            <span className="text-[10px] bg-violet-600 text-white px-1.5 py-0.5 rounded-full font-bold">{active.length}</span>
+          )}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-200">
+          {loading ? (
+            <div className="flex items-center justify-center py-6 text-gray-400 text-xs gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+            </div>
+          ) : patterns.length === 0 ? (
+            <p className="text-xs text-gray-400 px-3 py-4 text-center">No patterns available for {sectionType}</p>
+          ) : (
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+              {patterns.map((p) => {
+                const isActive = activeIds.has(p.id)
+                const isGlobal = globalIds.has(p.id)
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => toggle(p)}
+                    className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors ${
+                      isActive ? 'bg-violet-50 hover:bg-violet-100' : 'bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 flex items-center justify-center border transition-colors ${
+                      isActive ? 'bg-violet-600 border-violet-600' : 'border-gray-300'
+                    }`}>
+                      {isActive && <Check className="w-2.5 h-2.5 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-medium text-gray-800">{p.name}</span>
+                        <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">{p.type}</span>
+                        {isGlobal && <span className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">global</span>}
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-0.5 leading-snug line-clamp-2">{p.preview_description || p.description}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {active.length > 0 && (
+            <div className="px-3 py-2 border-t border-gray-100 bg-gray-50">
+              <p className="text-[10px] text-gray-500">
+                {active.length} pattern{active.length !== 1 ? 's' : ''} will be injected into the next regeneration of this section.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface PropertiesPanelProps {
   onRegenerate: (sectionId: string, customPrompt: string, mode: 'full' | 'content-edit') => void
@@ -101,7 +212,7 @@ const REGEN_PILLS: Record<string, string[]> = {
 }
 
 export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
-  const { page, selectedSectionId, setSelectedSection, updateSectionHtml, snapshotSections, revertSections, htmlSnapshots } = useBuilderStore()
+  const { page, selectedSectionId, setSelectedSection, updateSectionHtml, snapshotSections, revertSections, htmlSnapshots, manifest } = useBuilderStore()
   const section = page.sections.find((s) => s.id === selectedSectionId)
   const canRevert = section && htmlSnapshots[section.id] != null && htmlSnapshots[section.id] !== section.html
 
@@ -237,6 +348,11 @@ export function PropertiesPanel({ onRegenerate }: PropertiesPanelProps) {
                     {pill}
                   </button>
                 ))}
+              </div>
+            )}
+            {regenMode === 'full' && manifest && (
+              <div className="mb-2">
+                <SectionPatternPicker sectionType={section.type} />
               </div>
             )}
             <Textarea

@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   Layout, Sparkles, Plus, Trash2, GripVertical,
-  Loader2, ChevronDown, ChevronUp, Wand2, Zap, Globe
+  Loader2, ChevronDown, ChevronUp, Wand2, Zap, Globe, AlertTriangle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLogStore } from '@/lib/logStore'
@@ -108,7 +108,18 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
     removeSection,
     reorderSections,
     clearManifest,
+    fixSectionOrder,
   } = useBuilderStore()
+
+  // Detect if sections are out of order (footer before navbar, or footer not last)
+  const isOrderBroken = (() => {
+    const secs = page.sections
+    if (secs.length < 2) return false
+    const navbarIdx = secs.findIndex((s) => s.type === 'navbar')
+    const footerIdx = secs.findIndex((s) => s.type === 'footer')
+    if (navbarIdx === -1 || footerIdx === -1) return false
+    return footerIdx < navbarIdx || footerIdx !== secs.length - 1
+  })()
 
   const [prompt, setPrompt] = useState('')
   const [showBlocks, setShowBlocks] = useState(false)
@@ -211,6 +222,15 @@ export function Sidebar({ onGenerate, onAddSection }: SidebarProps) {
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
             Sections ({page.sections.length})
           </span>
+          {isOrderBroken && (
+            <button
+              onClick={() => { fixSectionOrder(); }}
+              className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors"
+              title="Section order is broken — click to fix (navbar first, footer last)"
+            >
+              <AlertTriangle className="w-3 h-3" /> Fix Order
+            </button>
+          )}
         </div>
 
         {page.sections.length === 0 ? (

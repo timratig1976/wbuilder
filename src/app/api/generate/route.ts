@@ -62,14 +62,15 @@ Apply ONLY the changes described in the instruction. Rules:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
-      max_tokens: 4000,
+      max_tokens: 8000,
       temperature: 0.1,
     })
     let html = res.choices[0]?.message?.content?.trim() ?? (currentHtml as string)
     // Strip accidental markdown fences
     html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/, '').trim()
-    // Sanity check — if AI returned empty or suspiciously short, fall back
-    if (html.length < 100) html = currentHtml as string
+    // Sanity check — if AI returned empty, suspiciously short, or much shorter than input, fall back
+    const originalLen = (currentHtml as string).length
+    if (html.length < 100 || html.length < originalLen * 0.5) html = currentHtml as string
 
     const log = {
       step: 'style-edit',

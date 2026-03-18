@@ -120,6 +120,7 @@ export function buildBaseStyle(manifest: SiteManifest): string {
   return `${buildRootCss(manifest)}
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
+  body { position: relative; }
   body {
     font-family: var(--font-body);
     background-color: var(--color-background);
@@ -289,13 +290,17 @@ export function assemblePreview(sections: Section[], manifest?: SiteManifest | n
     bgToken: detectSectionBgToken(s.html),
   }))
 
+  // Detect overlay-hero navbar behaviour from manifest
+  const isOverlayHeroNav = manifest?.navbar?.behaviour === 'overlay-hero'
+    || manifest?.navbar?.style === 'transparent-hero'
+
   const bodyParts: string[] = []
   // pendingPaddingTop: overlap depth to add to the NEXT section wrapper
   let pendingPaddingTop = 0
   for (let i = 0; i < sectionDivs.length; i++) {
     const s = sectionDivs[i]
-    const isNavbar = s.type === 'navbar' || s.html.includes('<nav')
-    const isFooter = s.type === 'footer' || i === sectionDivs.length - 1
+    const isNavbar = s.type === 'navbar'
+    const isFooter = s.type === 'footer'
 
     // Apply any pending padding-top from a previous transition overlap
     const ptStyle = pendingPaddingTop > 0
@@ -303,7 +308,13 @@ export function assemblePreview(sections: Section[], manifest?: SiteManifest | n
       : ''
     pendingPaddingTop = 0
 
-    bodyParts.push(`<div data-section-id="${s.id}"${ptStyle}>${s.html}</div>`)
+    // Overlay-hero navbar: zero-height absolutely positioned wrapper so the
+    // nav floats over the hero without pushing it down in the flow
+    if (isNavbar && isOverlayHeroNav) {
+      bodyParts.push(`<div data-section-id="${s.id}" data-overlay-nav>${s.html}</div>`)
+    } else {
+      bodyParts.push(`<div data-section-id="${s.id}"${ptStyle}>${s.html}</div>`)
+    }
 
     // Inject transition: skip after navbar, skip before/at footer, skip if same bg
     const canTransition = manifest
@@ -370,6 +381,8 @@ export function assemblePreview(sections: Section[], manifest?: SiteManifest | n
   <style>
     ${baseStyle}
     [data-section-id] { position: relative; cursor: pointer; transition: outline 0.15s; }
+    [data-section-id][data-overlay-nav] { position: absolute !important; top: 0; left: 0; right: 0; height: 0; z-index: 50; overflow: visible; }
+    [data-overlay-nav] nav { background: transparent !important; background-color: transparent !important; }
     [data-section-id]:hover { outline: 3px solid #6366f1; outline-offset: -2px; }
     [data-section-id].selected { outline: 3px solid #6366f1; outline-offset: -2px; box-shadow: inset 0 0 0 3px #6366f1; }
 
@@ -490,7 +503,7 @@ export function assemblePageWithManifest(
   let pendingPaddingTop = 0
   for (let i = 0; i < sectionHtmlList.length; i++) {
     const html = sectionHtmlList[i]
-    const isNavbar = html.includes('<nav')
+    const isNavbar = i === 0
     const isLast = i === sectionHtmlList.length - 1
 
     const ptStyle = pendingPaddingTop > 0 ? ` style="padding-top:${pendingPaddingTop}px"` : ''

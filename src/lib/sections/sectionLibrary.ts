@@ -52,7 +52,8 @@ export function findBestSection(
   sectionType: string,
   paradigm: StyleParadigm,
   industry?: string,
-  tone?: string
+  tone?: string,
+  navbarBehaviour?: string
 ): string | null {
   const index = loadIndex()
   if (index.length === 0) return null
@@ -62,6 +63,17 @@ export function findBestSection(
   // Filter to matching section type first
   const typed = index.filter((s) => s.type === sectionType)
   if (typed.length === 0) return null
+
+  // For navbar: behaviour is the primary selector — pick by tag match first
+  if (sectionType === 'navbar' && navbarBehaviour) {
+    const behaviourMatch = typed.find((s) => s.tags.includes(navbarBehaviour))
+    if (behaviourMatch) {
+      try {
+        const htmlPath = path.join(process.cwd(), 'src/data/section-library', behaviourMatch.html_path)
+        return fs.readFileSync(htmlPath, 'utf-8')
+      } catch { /* fall through to scoring */ }
+    }
+  }
 
   // Score all candidates, sort descending
   const ranked = typed

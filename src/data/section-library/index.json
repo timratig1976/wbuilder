@@ -1,1 +1,120 @@
-[]
+[
+  {
+    "id": "navbar-sticky-blur",
+    "type": "navbar",
+    "paradigm": "minimal-clean",
+    "quality_score": 9,
+    "tags": [
+      "navbar",
+      "sticky",
+      "blur",
+      "glassmorphism",
+      "navigation"
+    ],
+    "industries": [],
+    "tone": [],
+    "html_path": "navbar-sticky-blur.html"
+  },
+  {
+    "id": "navbar-overlay-hero",
+    "type": "navbar",
+    "paradigm": "bold-expressive",
+    "quality_score": 9,
+    "tags": [
+      "navbar",
+      "overlay",
+      "hero",
+      "transparent",
+      "navigation",
+      "overlay-hero"
+    ],
+    "industries": [],
+    "tone": [],
+    "html_path": "navbar-overlay-hero.html"
+  },
+  {
+    "id": "navbar-hide-on-scroll",
+    "type": "navbar",
+    "paradigm": "tech-dark",
+    "quality_score": 8,
+    "tags": [
+      "navbar",
+      "hide-on-scroll",
+      "auto-hide",
+      "navigation"
+    ],
+    "industries": [],
+    "tone": [],
+    "html_path": "navbar-hide-on-scroll.html"
+  },
+  {
+    "id": "navbar-1773863704485",
+    "type": "navbar",
+    "paradigm": "minimal-clean",
+    "quality_score": 8,
+    "tags": [
+      "navbar",
+      "static",
+      "solid",
+      "border"
+    ],
+    "industries": [],
+    "tone": [],
+    "html_path": "navbar-1773863704485.html",
+    "label": "navbar-example1",
+    "description": "",
+    "source": ""
+  },
+  {
+    "id": "navbar-1773863775569",
+    "type": "navbar",
+    "paradigm": "minimal-clean",
+    "quality_score": 8,
+    "tags": [
+      "navbar",
+      "solid",
+      "static",
+      "border"
+    ],
+    "industries": [],
+    "tone": [],
+    "html_path": "navbar-1773863775569.html",
+    "label": "navbar-example2",
+    "description": "",
+    "source": ""
+  },
+  {
+    "id": "navbar-1773863831455",
+    "type": "navbar",
+    "paradigm": "minimal-clean",
+    "quality_score": 8,
+    "tags": [
+      "navbar",
+      "static",
+      "solid"
+    ],
+    "industries": [],
+    "tone": [],
+    "html_path": "navbar-1773863831455.html",
+    "label": "navbar-light-shadow",
+    "description": "",
+    "source": ""
+  },
+  {
+    "id": "navbar-1773864212413",
+    "type": "navbar",
+    "paradigm": "minimal-clean",
+    "quality_score": 8,
+    "tags": [
+      "navbar",
+      "static",
+      "solid"
+    ],
+    "industries": [],
+    "tone": [],
+    "html_path": "navbar-1773864212413.html",
+    "label": "navbar-example3",
+    "description": "",
+    "source": ""
+  }
+]

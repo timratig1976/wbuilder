@@ -1,0 +1,51 @@
+<nav id="main-nav" class="fixed top-0 left-0 w-full flex items-center justify-between px-4 md:px-16 lg:px-24 xl:px-32 py-4 md:py-6 transition-all duration-500 z-50" style="background-color:var(--color-primary)">
+ 
+  <a href="#" style="color:#fff;font-family:var(--font-heading)" class="font-bold text-lg tracking-tight">{{COMPANY_NAME}}</a>
+ 
+  <div class="hidden md:flex items-center gap-4 lg:gap-8">
+    <a href="#" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color:#fff">Home</a>
+    <a href="#" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color:#fff">Products</a>
+    <a href="#" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color:#fff">Contact</a>
+    <a href="#" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color:#fff">About</a>
+    <button class="border px-4 py-1 text-sm font-light rounded-full transition-all" style="color:#fff;border-color:rgba(255,255,255,0.6)">New Launch</button>
+  </div>
+ 
+  <div class="hidden md:flex items-center gap-4">
+    <button class="px-8 py-2.5 rounded-full transition-all duration-500" style="background-color:#fff;color:var(--color-primary)">Login</button>
+  </div>
+ 
+  <button id="nav-toggle" class="flex md:hidden p-2" onclick="const m=document.getElementById('nav-menu');if(m)m.classList.toggle('-translate-x-full')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24" style="color:#fff"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+  </button>
+ 
+  <div id="nav-menu" class="fixed top-0 left-0 w-full h-screen flex flex-col md:hidden items-center justify-center gap-6 font-medium -translate-x-full transition-all duration-500" style="background-color:var(--color-background);color:var(--color-text)">
+    <button class="absolute top-4 right-4" onclick="document.getElementById('nav-menu').classList.add('-translate-x-full')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <a href="#" class="text-sm font-medium">Home</a>
+    <a href="#" class="text-sm font-medium">Products</a>
+    <a href="#" class="text-sm font-medium">Contact</a>
+    <a href="#" class="text-sm font-medium">About</a>
+    <button class="px-8 py-2.5 rounded-full transition-all duration-500" style="background-color:var(--color-primary);color:#fff">Login</button>
+  </div>
+</nav>
+ 
+<script>
+  (function(){
+    var nav = document.getElementById('main-nav');
+    if(!nav) return;
+    window.addEventListener('scroll', function(){
+      if(window.scrollY > 10){
+        nav.style.backgroundColor = 'rgba(255,255,255,0.85)';
+        nav.style.backdropFilter = 'blur(12px)';
+        nav.style.paddingTop = '0.75rem';
+        nav.style.paddingBottom = '0.75rem';
+      } else {
+        nav.style.backgroundColor = 'var(--color-primary)';
+        nav.style.backdropFilter = '';
+        nav.style.paddingTop = '1.5rem';
+        nav.style.paddingBottom = '1.5rem';
+      }
+    });
+  })()
+</script>

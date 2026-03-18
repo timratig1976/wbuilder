@@ -53,16 +53,16 @@ const MODEL_CONFIG: Record<SectionType, ModelConfig> = {
   // Fallback: gpt-4.1 (chat completions)
   // Pass 1: gpt-4.1 for all sections — fast (~15-20s), solid structural HTML
   // Pass 2 (enhance): gpt-4.1 — visual upgrade, fixes artifacts (~20-30s)
-  hero:         { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.8, maxTokens: 4096 },
-  features:     { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.7, maxTokens: 4096 },
-  pricing:      { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.5, maxTokens: 4096 },
-  custom:       { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.8, maxTokens: 4096 },
-  testimonials: { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.7, maxTokens: 4096 },
-  navbar:       { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.5, maxTokens: 3000 },
-  footer:       { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.4, maxTokens: 3000 },
-  cta:          { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.7, maxTokens: 3000 },
-  stats:        { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.5, maxTokens: 3000 },
-  faq:          { primary: 'gpt-4.1', fallback: 'gpt-4o', temperature: 0.5, maxTokens: 4096 },
+  hero:         { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.8, maxTokens: 4096 },
+  features:     { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.7, maxTokens: 4096 },
+  pricing:      { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.5, maxTokens: 4096 },
+  custom:       { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.8, maxTokens: 4096 },
+  testimonials: { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.7, maxTokens: 4096 },
+  navbar:       { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.5, maxTokens: 3000 },
+  footer:       { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.4, maxTokens: 3000 },
+  cta:          { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.7, maxTokens: 3000 },
+  stats:        { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.5, maxTokens: 3000 },
+  faq:          { primary: 'gpt-5.4', fallback: 'gpt-5-mini', temperature: 0.5, maxTokens: 4096 },
 }
 
 // Per-section layout hints appended to the system prompt

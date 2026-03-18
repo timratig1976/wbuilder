@@ -87,6 +87,7 @@ interface BuilderStore {
   setManifest: (manifest: SiteManifest) => void
   clearManifest: () => void
   newProjectFromManifest: (manifest: SiteManifest) => void
+  updateSectionPatterns: (sectionType: string, patterns: NonNullable<SiteManifest['section_patterns']>[string]) => void
 
   briefingPresets: Record<PresetSlot, BriefingPreset | null>
   saveBriefingPreset: (slot: PresetSlot, data: BriefingData, label: string) => void
@@ -108,6 +109,7 @@ interface BuilderStore {
   setPreviewMode: (mode: 'desktop' | 'tablet' | 'mobile') => void
   setGenerating: (v: boolean) => void
 
+  fixSectionOrder: () => void
   addSection: (type: SectionType, html: string, prompt: string) => void
   snapshotSections: (ids: string[]) => void
   revertSections: (ids: string[]) => void
@@ -255,6 +257,14 @@ export const useBuilderStore = create<BuilderStore>()(
             },
           },
         })),
+        updateSectionPatterns: (sectionType, patterns) => set((s) => {
+          if (!s.manifest) return {}
+          const updated: SiteManifest = {
+            ...s.manifest,
+            section_patterns: { ...(s.manifest.section_patterns ?? {}), [sectionType]: patterns },
+          }
+          return { manifest: updated, project: { ...s.project, manifest: updated, updatedAt: Date.now() } }
+        }),
         clearManifest: () => set((s) => ({
           manifest: null,
           project: { ...s.project, manifest: null, updatedAt: Date.now() },
@@ -414,6 +424,16 @@ export const useBuilderStore = create<BuilderStore>()(
             })),
           })),
 
+        fixSectionOrder: () =>
+          set((s) => withPage({
+            project: updateActivePage(s.project, (p) => {
+              const navbar = p.sections.filter((sec) => sec.type === 'navbar')
+              const footer = p.sections.filter((sec) => sec.type === 'footer')
+              const middle = p.sections.filter((sec) => sec.type !== 'navbar' && sec.type !== 'footer')
+              return { ...p, updatedAt: Date.now(), sections: [...navbar, ...middle, ...footer] }
+            }),
+          })),
+
         addSection: (type, html, prompt) =>
           set((s) => withPage({
             project: updateActivePage(s.project, (p) => {
@@ -472,9 +492,16 @@ export const useBuilderStore = create<BuilderStore>()(
               updatedAt: Date.now(),
               pages: s.project.pages.map((p) => ({
                 ...p,
-                sections: p.sections.map((sec) =>
-                  snap[sec.id] != null ? { ...sec, html: snap[sec.id] } : sec
-                ),
+                sections: p.sections
+                  .map((sec) => snap[sec.id] != null ? { ...sec, html: snap[sec.id] } : sec)
+                  // Ensure navbar is first, footer is last after restoring
+                  .sort((a, b) => {
+                    if (a.type === 'navbar') return -1
+                    if (b.type === 'navbar') return 1
+                    if (a.type === 'footer') return 1
+                    if (b.type === 'footer') return -1
+                    return 0
+                  }),
               })),
             }
             return withPage({ project })
@@ -506,12 +533,29 @@ export const useBuilderStore = create<BuilderStore>()(
             const project = {
               ...s.project,
               updatedAt: Date.now(),
-              pages: s.project.pages.map((p) => ({
-                ...p,
-                sections: p.sections.map((sec) =>
-                  entry.snapshots[sec.id] != null ? { ...sec, html: entry.snapshots[sec.id] } : sec
-                ),
-              })),
+              pages: s.project.pages.map((p) => {
+                // Restore section order if captured in this history entry
+                const savedOrder = entry.sectionOrder?.find((so) => so.pageId === p.id)
+                if (savedOrder) {
+                  // Rebuild sections in saved order, restoring HTML from snapshot
+                  const secMap = Object.fromEntries(p.sections.map((sec) => [sec.id, sec]))
+                  const ordered = savedOrder.sectionIds
+                    .map((sid) => {
+                      const sec = secMap[sid]
+                      if (!sec) return null
+                      return entry.snapshots[sid] != null ? { ...sec, html: entry.snapshots[sid] } : sec
+                    })
+                    .filter(Boolean) as typeof p.sections
+                  return { ...p, sections: ordered }
+                }
+                // Fallback: restore HTML only, keep current order
+                return {
+                  ...p,
+                  sections: p.sections.map((sec) =>
+                    entry.snapshots[sec.id] != null ? { ...sec, html: entry.snapshots[sec.id] } : sec
+                  ),
+                }
+              }),
             }
             const next = withPage({ project })
             return entry.manifest ? { ...next, manifest: entry.manifest } : next
@@ -632,7 +676,7 @@ export const useBuilderStore = create<BuilderStore>()(
 
         saveProject: () =>
           set((s) => {
-            const toSave = { ...s.project, updatedAt: Date.now() }
+            const toSave = { ...s.project, updatedAt: Date.now(), manifest: s.manifest ?? s.project.manifest }
             const existing = s.savedProjects.findIndex((p) => p.id === toSave.id)
             const savedProjects = existing >= 0
               ? s.savedProjects.map((p) => p.id === toSave.id ? toSave : p)

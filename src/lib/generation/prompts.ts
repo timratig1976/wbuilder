@@ -44,6 +44,8 @@ export function buildManifestPrompt(input: {
   visual_tone?: string
   animation_budget: string
   navbar_style: string
+  navbar_behaviour: string
+  navbar_visual: string
   navbar_mobile: string
   brand_colors?: Record<string, string>
   selected_patterns?: SelectedPattern[]
@@ -60,7 +62,8 @@ Pain Points: ${input.pain_points.join('; ')}
 Style Paradigm: ${input.style_paradigm}
 Visual Tone: ${input.visual_tone ?? 'confident'}
 Animation Budget: ${input.animation_budget}
-Navbar Style: ${input.navbar_style}
+Navbar Behaviour: ${input.navbar_behaviour} (how it moves on scroll)
+Navbar Visual: ${input.navbar_visual} (what it looks like)
 Navbar Mobile: ${input.navbar_mobile}
 ${input.brand_colors ? `Brand Colors (MUST USE EXACTLY): ${JSON.stringify(input.brand_colors)}` : ''}
 ${input.selected_patterns?.length ? `
@@ -122,6 +125,8 @@ Generate the manifest following this exact schema:
   "style_source": { "type": "ai-generated" },
   "navbar": {
     "style": "${input.navbar_style}",
+    "behaviour": "${input.navbar_behaviour}",
+    "visual": "${input.navbar_visual}",
     "scroll_threshold_px": 40,
     "height": "h-16",
     "layout_desktop": "logo-left nav-center cta-right",
@@ -136,7 +141,7 @@ Generate the manifest following this exact schema:
       "id": "home",
       "slug": "index",
       "title": "Startseite",
-      "sections": ["navbar", "hero", "pain-points", "services", "process", "cta", "footer"],
+      "sections": ["GENERATE this array based on company/industry — RULES: (1) ALWAYS start with 'navbar', (2) ALWAYS end with 'footer', (3) pick 4-7 middle sections from: hero, pain-points, services, features, process, stats, testimonials, pricing, faq, team, cta, contact — choose what makes sense for ${input.industry} targeting ${input.personas.join(' and ')}"],
       "meta_description": "Write a compelling meta description"
     }
   ],
@@ -179,7 +184,7 @@ Generate the manifest following this exact schema:
   "_decision_log": {
     "paradigm": "${input.style_paradigm} — user selected",
     "colors": "${input.brand_colors ? 'user brand colors — not overwritten' : 'ai-generated from industry+tone'}",
-    "navbar": "${input.navbar_style} — user selected in briefing wizard"
+    "navbar": "behaviour=${input.navbar_behaviour}, visual=${input.navbar_visual} — user selected in briefing wizard"
   }
 }`
 }
@@ -189,6 +194,17 @@ Generate the manifest following this exact schema:
 // ═══════════════════════════════════════════════════════
 
 export function buildPass1System(dict: StyleDictionary, manifest: SiteManifest, sectionType?: string): string {
+  const isChrome = sectionType === 'navbar' || sectionType === 'footer'
+
+  // Detect if an overlay-hero navbar pattern is active (section-specific or global)
+  const activeNavbarPatterns = [
+    ...(manifest.section_patterns?.[sectionType ?? ''] ?? []),
+    ...(manifest.selected_patterns ?? []).filter((p) => p.applicable_sections?.includes('navbar') || p.applicable_sections?.includes('*')),
+  ]
+  const isOverlayHero = sectionType === 'navbar' && activeNavbarPatterns.some(
+    (p) => (p.implementation as Record<string, string> | undefined)?.navbar_behaviour === 'overlay-hero'
+  )
+
   const tokens = manifest.design_tokens
   const { layout, typography, color, decoration } = dict.rules
   // design_spec on the manifest takes precedence over raw dictionary patterns
@@ -295,9 +311,9 @@ VISUAL TONE: ELECTRIC (maximum energy)
 - CTAs: always primary with glow, shimmer, or gradient fill; never ghost`,
   }[tone] ?? ''
 
-  return `You are an expert frontend developer. Generate a single HTML section — structure and content only.
+  return `You are an expert frontend developer. Generate a single HTML ${isChrome ? `${sectionType} component` : 'section'} — structure and content only.
 NO @keyframes, NO animations, NO transition-* in Pass 1. That is Pass 2's job.
-
+${isChrome ? `NO SVG backgrounds, NO mesh gradients, NO decorative shapes. This is a UI chrome element — NOT a marketing section.` : ''}
 OUTPUT: Raw HTML only. Start with < end with >. Zero markdown, zero code fences, zero explanation.
 
 ══════════════════════════════════
@@ -306,12 +322,12 @@ DESIGN SYSTEM: ${dict.paradigm.toUpperCase()}
 Use EXACTLY these HTML patterns from the design system — not alternatives:
 ${patternsBlock}
 
-LAYOUT RULES (non-negotiable):
+${isChrome ? '' : `LAYOUT RULES (non-negotiable):
 - Outer <section> = full-width background + vertical padding (${layout.section_padding})
 - Inner container = max-width centering: ${layout.max_width} with px-5 md:px-8
 - ALL content lives inside the container div — never directly in <section>
 - Max columns: ${layout.columns_max} — grids always start grid-cols-1 then md:grid-cols-X
-- Overlaps allowed: ${layout.overlaps_allowed} | Full bleed: ${layout.full_bleed_allowed} | Negative margins: ${layout.negative_margin_allowed}
+- Overlaps allowed: ${layout.overlaps_allowed} | Full bleed: ${layout.full_bleed_allowed} | Negative margins: ${layout.negative_margin_allowed}`}
 
 TYPOGRAPHY RULES:
 - Hero H1 size: ${typography.heading_size_hero}
@@ -323,7 +339,7 @@ TYPOGRAPHY RULES:
 
 RESPONSIVE FONT SCALING (${typography.responsive_scale !== false ? 'ENABLED — required' : 'DISABLED'}):
 ${typography.responsive_scale !== false ? `- ALL headings MUST use responsive size classes — never a single fixed size
-- Hero H1 pattern:  text-3xl sm:text-4xl md:text-5xl lg:${typography.heading_size_hero.replace(/^text-/, 'text-')} ${typography.line_height_hero ?? 'leading-tight'} ${typography.heading_weight ? `font-[${typography.heading_weight}]` : ''}
+- Hero H1 pattern:  text-3xl sm:text-4xl md:text-5xl lg:${typography.heading_size_hero.replace(/^text-/, 'text-')} ${typography.line_height_hero ?? 'leading-tight'}${typography.heading_weight ? ` ${typography.heading_weight}` : ''}
 - Section H2 pattern: text-2xl sm:text-3xl md:${typography.heading_size_section} ${typography.line_height_section ?? 'leading-snug'}
 - Sub-headings H3: text-xl sm:text-2xl leading-snug
 - Body text: text-sm sm:text-base leading-relaxed
@@ -334,7 +350,16 @@ COLOR SYSTEM (${color.base} base):
 - Dark sections: ${color.dark_sections_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
 - Gradients: ${color.gradient_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
 
-SECTION BACKGROUND RULES (critical — prevents every section looking the same):
+${isChrome ? `CHROME ELEMENT RULES (non-negotiable — navbar/footer are not marketing sections):
+- NO section-style vertical padding (py-16, py-24 etc.) — use only the element's own height
+- NO background gradients, NO SVG decorations, NO mesh/noise/geometric background treatments
+- NO <section> wrapper — outermost element MUST be <nav> or <footer> respectively
+${isOverlayHero
+  ? `- OVERLAY HERO MODE: navbar starts with background: transparent and position: absolute (overlays the hero)
+- On scroll, JS adds a class that applies backdrop-blur + semi-transparent background (see <!-- [SCROLL-CLASS: nav-scrolled] --> placeholder)
+- Initial state: class="absolute top-0 left-0 right-0 z-50 w-full" style="background:transparent"
+- Add <!-- [SCROLL-CLASS: nav-scrolled] --> comment inside <nav> so Pass 2 can wire the scroll JS`
+  : `- background-color ONLY via var(--color-background) or color-mix() for blur effect`}` : `SECTION BACKGROUND RULES (critical — prevents every section looking the same):
 - Background sequence pattern: ${effectiveBgSequence.join(' → ')} (cycle through these tokens in order)
   - "background" → style="background-color: var(--color-background)"
   - "surface"     → style="background-color: var(--color-surface)"
@@ -360,7 +385,7 @@ DECORATION:
 - Glassmorphism: ${decoration.glassmorphism} | Mesh gradient: ${decoration.mesh_gradient}
 - Border glow: ${decoration.border_glow} | Geometric shapes: ${decoration.geometric_shapes}
 - Diagonal cuts: ${decoration.diagonal_cuts ?? false} | Concave sections: ${decoration.concave_sections ?? false}
-→ Use <!-- [BG: geometric-shapes | opacity: 0.08] --> as placeholder (resolved in Pass 2)
+→ Use <!-- [BG: geometric-shapes | opacity: 0.08] --> as placeholder (resolved in Pass 2)`}
 
 CTA BUTTON SYSTEM (non-negotiable — use ONLY these three variants, nothing else):
 PRIMARY CTA   → ${hp.cta_primary ?? `<a href="#" class="inline-flex items-center gap-2 px-7 py-4 text-sm font-semibold rounded-sm transition-all duration-200 hover:-translate-y-0.5" style="background-color:var(--color-accent);color:#fff">`}
@@ -373,10 +398,10 @@ CTA USAGE RULES:
 - Use GHOST CTA for tertiary links only (e.g. "Already a customer? Sign in")
 - NEVER mix CTA styles arbitrarily — every button on the page must match one of the three above
 - NEVER add extra border, box-shadow, shimmer, ring, glow, or gradient to a CTA unless the section is the HERO — in hero only, PRIMARY CTA may add hover shadow: hover:shadow-xl hover:shadow-accent/30
-- NEVER hardcode colors on buttons — always var(--color-accent) or var(--color-primary) via style=""
+- NEVER hardcode colors on buttons — always use the exact var() from the PRIMARY/SECONDARY/GHOST CTA patterns above, never substitute a different color variable
 - ALL buttons minimum h-11 (py-3 minimum) for touch targets
 
-CARD HOVER SYSTEM (non-negotiable — every hoverable card must use this exact pattern):
+${isChrome ? '' : `CARD HOVER SYSTEM (non-negotiable — every hoverable card must use this exact pattern):
 Card base      → ${hp.card ?? `<div class="bg-white border border-gray-100 rounded-sm p-6">`}
 Card wrapper   → ${hp.card_wrapper ?? `<div class="group cursor-pointer">`}
 Hover classes  → add these to the card element: ${(hp.card_hover_classes ?? 'transition-all duration-200 ease-out')} ${hp.card_hover ?? 'group-hover:-translate-y-1 group-hover:shadow-md'}
@@ -395,8 +420,9 @@ CARD HOVER RULES:
     </div>
   </div>
 
+`}
 FORBIDDEN (never use): ${dict.forbidden_patterns.join(' | ')}
-REQUIRED (always include): ${dict.required_patterns.join(' | ')}
+${isChrome ? '' : `REQUIRED (always include): ${dict.required_patterns.join(' | ')}`}
 ${dict.paradigm === 'brutalist' ? `
 ══════════════════════════════════
 BRUTALIST RULES (absolute — these override everything else)
@@ -527,13 +553,6 @@ FONT TOKENS (set on <body> globally, apply to override headings):
   style="font-family: var(--font-heading)"  → explicit heading override if needed
   style="font-family: var(--font-body)"     → body text (already inherited)
 
-TYPE SCALE (use these Tailwind classes for text sizing):
-  Hero H1:    ${tokens.type_scale.hero_h1}
-  Section H2: ${tokens.type_scale.section_h2}
-  Card H3:    ${tokens.type_scale.card_h3}
-  Eyebrow:    ${tokens.type_scale.eyebrow}
-  CTA button: ${tokens.type_scale.cta_button}
-
 SPACING:
   Section light: ${tokens.spacing.section_padding_light}
   Section heavy: ${tokens.spacing.section_padding_heavy}
@@ -544,14 +563,35 @@ RESPONSIVE (non-negotiable)
 ══════════════════════════════════
 ${manifest.pass1_prompt_rules.rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 
-${visualToneBlock}
+${isChrome ? '' : visualToneBlock}
 
 SITE:
 Company: ${manifest.content.company_name} | Industry: ${manifest.site.industry}
-Tone: ${manifest.site.tone} | Adjectives: ${manifest.site.adjectives.join(', ')}${manifest.selected_patterns?.length ? `
+Tone: ${manifest.site.tone} | Adjectives: ${manifest.site.adjectives.join(', ')}${(() => {
+  // Global patterns filtered to this section type
+  const globalRelevant = (manifest.selected_patterns ?? []).filter((p) => {
+    const s = p.applicable_sections
+    if (!s || s.includes('*')) return true
+    if (!sectionType) return true
+    return s.includes(sectionType)
+  })
+  // Per-section patterns (section_patterns[sectionType]) — take priority, deduplicate by id
+  const sectionSpecific = sectionType ? (manifest.section_patterns?.[sectionType] ?? []) : []
+  const sectionSpecificIds = new Set(sectionSpecific.map((p) => p.id))
+  const combined = [...sectionSpecific, ...globalRelevant.filter((p) => !sectionSpecificIds.has(p.id))]
+  if (!combined.length) return ''
+  return `
 
-DESIGN PATTERNS (mandatory — apply to every section):
-${manifest.selected_patterns.map((p, i) => `${i + 1}. [${p.type}] ${p.name}: ${p.description}${p.preview_description ? ` — ${p.preview_description}` : ''}${p.implementation?.html_snippet ? `\n   USE THIS EXACT HTML: ${p.implementation.html_snippet.slice(0, 400)}` : ''}${p.implementation?.css_snippet ? `\n   CSS: ${p.implementation.css_snippet.slice(0, 200)}` : ''}${p.implementation?.placeholder ? `\n   Drop placeholder where appropriate: ${p.implementation.placeholder}` : ''}`).join('\n')}` : ''}`
+DESIGN PATTERNS (apply to THIS section):
+${combined.map((p, i) => {
+    const impl = p.implementation as Record<string, string> | undefined
+    const navBehaviour = impl?.navbar_behaviour
+    const navLayout    = impl?.navbar_layout
+    const navStructure = impl?.navbar_structure
+    const navMobile    = impl?.navbar_mobile
+    return `${i + 1}. [${p.type}] ${p.name}: ${p.description}${p.preview_description ? ` — ${p.preview_description}` : ''}${navBehaviour ? `\n   NAVBAR BEHAVIOUR: ${navBehaviour}` : ''}${navLayout ? `\n   NAVBAR LAYOUT: ${navLayout}` : ''}${navStructure ? `\n   NAVBAR STRUCTURE: ${navStructure}` : ''}${navMobile ? `\n   NAVBAR MOBILE: ${navMobile}` : ''}${impl?.html_snippet ? `\n   USE THIS EXACT HTML: ${impl.html_snippet.slice(0, 400)}` : ''}${impl?.css_snippet ? `\n   CSS: ${impl.css_snippet.slice(0, 200)}` : ''}${impl?.placeholder ? `\n   Drop placeholder where appropriate: ${impl.placeholder}` : ''}`
+  }).join('\n')}`
+})()}`
 }
 
 export interface SectionPositionContext {
@@ -572,33 +612,122 @@ export function buildPass1User(
   const nav = manifest.navbar
 
   if (sectionType === 'navbar') {
+    const tok = manifest.design_tokens.colors
+    const ctaPrimary = manifest.design_spec?.cta.primary
+
+    // Pattern overrides take precedence over manifest.navbar fields
+    const activeNavbarPatterns = [
+      ...(manifest.section_patterns?.['navbar'] ?? []),
+      ...(manifest.selected_patterns ?? []).filter(
+        (p) => p.applicable_sections?.includes('navbar') || p.applicable_sections?.includes('*')
+      ),
+    ]
+    const patternBehaviour = activeNavbarPatterns
+      .map((p) => (p.implementation as Record<string, string> | undefined)?.navbar_behaviour)
+      .find(Boolean)
+    const patternLayout = activeNavbarPatterns
+      .map((p) => (p.implementation as Record<string, string> | undefined)?.navbar_layout)
+      .find(Boolean)
+    const patternMobile = activeNavbarPatterns
+      .map((p) => (p.implementation as Record<string, string> | undefined)?.navbar_mobile)
+      .find(Boolean)
+
+    // ── Behaviour: how the navbar moves ─────────────────────────────────────
+    // Priority: pattern override > manifest.navbar.behaviour > fallback from legacy style
+    const effectiveBehaviour: string = patternBehaviour
+      ?? nav.behaviour
+      ?? (nav.style === 'transparent-hero' ? 'overlay-hero'
+        : nav.style === 'hidden-scroll' ? 'hide-on-scroll'
+        : 'sticky')
+
+    // ── Visual: what the navbar looks like ───────────────────────────────────
+    // Priority: manifest.navbar.visual > fallback from legacy style
+    const effectiveVisual: string = nav.visual
+      ?? (nav.style === 'sticky-blur' ? 'blur'
+        : nav.style === 'transparent-hero' ? 'transparent'
+        : 'solid')
+
+    // ── Resolve effective layout ─────────────────────────────────────────────
+    const effectiveLayout = patternLayout ?? nav.layout_desktop
+
+    // ── Build concrete <nav> opener ──────────────────────────────────────────
+    // Behaviour controls position classes; visual controls background style
+    const behaviourClasses =
+      effectiveBehaviour === 'overlay-hero'    ? 'absolute top-0 left-0 right-0 z-50'
+      : effectiveBehaviour === 'hide-on-scroll' ? 'sticky top-0 z-50'
+      : effectiveBehaviour === 'static'         ? 'relative z-40'
+      : /* sticky (default) */                    'sticky top-0 z-50'
+
+    const visualStyle =
+      effectiveVisual === 'blur'        ? `background-color: color-mix(in srgb, var(--color-background) 85%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px)`
+      : effectiveVisual === 'transparent' ? `background: transparent`
+      : effectiveVisual === 'border'      ? `background-color: var(--color-background); border-bottom: 1px solid rgba(0,0,0,0.08)`
+      : /* solid */                         `background-color: var(--color-background)`
+
+    const scrollPlaceholder = effectiveBehaviour === 'overlay-hero' ? '<!-- [SCROLL-CLASS: nav-scrolled] -->' : ''
+    const hiddenScrollPlaceholder = effectiveBehaviour === 'hide-on-scroll' ? '<!-- [HIDDEN-SCROLL] -->' : ''
+
+    const navOpener = `<nav class="${behaviourClasses} ${nav.height} w-full flex items-center justify-between px-5 md:px-8" style="${visualStyle}">${scrollPlaceholder}${hiddenScrollPlaceholder}`
+
+    const variationSeeds = [
+      'Use a pill-shaped CTA button (rounded-full) and generous padding between nav links.',
+      'Use a bordered CTA button (border-2, transparent background) instead of filled.',
+      'Spread nav links with wide gap-10 spacing and use a compact logo on the left.',
+      'Use a centered logo with nav links split equally left and right of it.',
+      'Use a minimal design with no CTA button visible on desktop — only on mobile menu.',
+      'Use extra-bold logo typography and slightly smaller nav links with letter-spacing.',
+      'Include a subtle divider between the logo and nav links using a vertical line.',
+      'Use an icon-only hamburger (3 bars SVG) with a full-screen slide-in mobile overlay.',
+      'Use a bottom sheet style mobile menu that slides up from the bottom.',
+      'Add a small badge or "New" label next to one of the nav links.',
+    ]
+    const seed = variationSeeds[Math.floor(Math.random() * variationSeeds.length)]
+
     return `Create a responsive navbar for:
 Company: ${content.company_name}
-Style: ${nav.style}
+Behaviour: ${effectiveBehaviour}${patternBehaviour ? ` (overridden by pattern)` : ''} — controls scroll/position
+Visual: ${effectiveVisual} — controls background appearance
+DESIGN VARIATION (apply this to differentiate from previous generations): ${seed}
 Height: ${nav.height}
-Desktop layout: ${nav.layout_desktop}
+Desktop layout: ${effectiveLayout}${patternLayout ? ` (overridden by pattern)` : ''}
 Nav links: ${nav.links.join(', ')}
 CTA button: ${nav.cta_button ? `Yes — label: "${nav.cta_label}"` : 'No'}
-Mobile menu: ${nav.mobile_menu}
+Mobile menu: ${patternMobile ?? nav.mobile_menu}
 Tone: ${manifest.site.tone}
 
+RESOLVED COLORS — use ONLY these exact CSS variables (never Tailwind bg-* classes for colors):
+  --color-background : ${tok.background}   ← navbar bg / mobile menu bg
+  --color-surface    : ${tok.surface}      ← dropdown / card bg
+  --color-text       : ${tok.text}         ← logo text, nav link active
+  --color-text-muted : ${tok.text_muted}   ← nav link default color
+
 NAVBAR OUTPUT RULES (non-negotiable):
-- Outermost element MUST be <nav> — NOT <section>
-- Apply to <nav>: class="${nav.height} w-full flex items-center justify-between px-5 md:px-8"
-${nav.style === 'sticky-blur'
-  ? '- STICKY BLUR: add classes "sticky top-0 z-50 backdrop-blur-md" and style="background-color: color-mix(in srgb, var(--color-background) 85%, transparent)" to <nav>'
-  : nav.style === 'transparent-hero'
-  ? '- TRANSPARENT HERO: add classes "absolute top-0 left-0 right-0 z-50" to <nav>, no background color (transparent)'
-  : nav.style === 'hidden-scroll'
-  ? '- HIDDEN SCROLL: add classes "sticky top-0 z-50" to <nav>, style="background-color: var(--color-background)" — JS will hide on scroll-down, show on scroll-up'
-  : '- DEFAULT STICKY: add classes "sticky top-0 z-50" and style="background-color: var(--color-background); border-bottom: 1px solid rgba(0,0,0,0.08)" to <nav>'}
-- Logo: <a href="#"> with company name as styled text (font-bold, font-family: var(--font-heading))
-- Desktop links: <ul class="hidden md:flex items-center gap-6"> — text-sm, color: var(--color-text-muted)
-- CTA button: hidden on mobile (hidden md:flex), background: var(--color-primary), text white, rounded, px-4 py-2
+- Outermost element MUST be <nav> — NOT <section>, NOT <header>
+- USE THIS EXACT <nav> OPENER — do not change classes or style:
+  ${navOpener}
+${effectiveBehaviour === 'overlay-hero'
+  ? `- OVERLAY HERO: nav is absolutely positioned — it overlays the hero section below it
+- Links and logo MUST be light colored (white or var(--color-text)) since hero image is always dark
+- The <!-- [SCROLL-CLASS: nav-scrolled] --> placeholder will be resolved post-generation into JS blur-on-scroll`
+  : effectiveBehaviour === 'hide-on-scroll'
+  ? `- HIDE ON SCROLL: The <!-- [HIDDEN-SCROLL] --> placeholder will be resolved post-generation into JS hide/show`
+  : effectiveVisual === 'blur'
+  ? `- STICKY BLUR: backdrop-filter blur already set via nav opener — do not override background-color`
+  : `- STICKY: position and background already set via nav opener above`}
+${manifest.logo_url
+  ? `- Logo: <a href="#"><img src="${manifest.logo_url}" alt="${content.company_name} logo" class="h-8 w-auto object-contain" style="max-height:2rem" /></a>`
+  : `- Logo: <a href="#" style="color: var(--color-text); font-family: var(--font-heading)" class="font-bold text-lg">${content.company_name}</a>`}
+- Desktop links: <ul class="hidden md:flex items-center gap-6"> with <a> tags using style="color: var(--color-text-muted)" class="text-sm hover:opacity-80 transition-opacity"
+- CTA button (hidden on mobile): use the PRIMARY CTA pattern from the design system above — replace label with "${nav.cta_label}" and add class="hidden md:inline-flex"
 - Hamburger icon: visible only mobile (md:hidden), opens a mobile overlay menu below
-- Mobile menu: full-width dropdown below nav, hidden by default, toggled via JS onclick
+- Mobile menu: full-width dropdown below nav, style="background-color: var(--color-background)" hidden by default, toggled via JS onclick
 - Mobile menu toggle JS MUST use null-safe pattern: const m = document.getElementById('...'); if (m) m.classList.toggle('hidden');
-- ALL colors via var(--color-*) — no hardcoded hex values`
+- ALL colors via var(--color-*) inline styles — NEVER hardcoded hex, NEVER Tailwind color classes (bg-gray-*, text-gray-*, bg-dark, bg-slate-*, etc.)${ctaPrimary ? `
+
+THE PRIMARY CTA PATTERN FOR THIS PROJECT IS:
+${ctaPrimary}
+Use this EXACT pattern for the navbar CTA button (with hidden md:inline-flex added).` : ''}
+${referenceHtml ? `\nREFERENCE NAVBAR (adapt structure, replace company name/links/colors with project values — do NOT copy verbatim):\n${referenceHtml.trim()}` : ''}`
   }
 
   if (sectionType === 'footer') {

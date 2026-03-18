@@ -2,7 +2,7 @@ import { SiteManifest, ValidationResult } from '../types/manifest'
 import { loadStyleDictionary } from '../style/styleDictionary'
 import { findBestSection } from '../sections/sectionLibrary'
 import { provider, MODEL_CONFIG } from '../ai/models'
-import { safeParseJson, applyAutoFixes, sanitizeImagePaths } from './autoFix'
+import { safeParseJson, applyAutoFixes, sanitizeImagePaths, resolveNavbarPlaceholders, enforceNavOpener } from './autoFix'
 import { designSpecFromDict } from '../style/styleDictionary'
 import {
   buildPass1System, buildPass1User,
@@ -34,24 +34,33 @@ export async function generateSection(
   pageIndex?: number
 ): Promise<GeneratedSection> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
-  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone)
+  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone, manifest.navbar?.behaviour)
 
   // ── Pass 1: Structure ─────────────────────────────────
   onProgress?.({ pass: 1 })
-  const pass1Html = await provider.complete(
+  let pass1Html = await provider.complete(
     {
       ...MODEL_CONFIG.pass1_structure,
+      temperature: sectionType === 'navbar' ? 0.7 : MODEL_CONFIG.pass1_structure.temperature,
       system: buildPass1System(dict, manifest, sectionType),
       messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml, posCtx, pageIndex) }],
     },
     { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
   )
+  if (sectionType === 'navbar') {
+    const nav = manifest.navbar
+    const effectiveBehaviour = nav.behaviour ?? (nav.style === 'transparent-hero' ? 'overlay-hero' : nav.style === 'hidden-scroll' ? 'hide-on-scroll' : 'sticky')
+    const effectiveVisual = nav.visual ?? (nav.style === 'sticky-blur' ? 'blur' : nav.style === 'transparent-hero' ? 'transparent' : 'solid')
+    pass1Html = enforceNavOpener(pass1Html, effectiveBehaviour, effectiveVisual, nav.height)
+  }
+  pass1Html = resolveNavbarPlaceholders(pass1Html)
   onProgress?.({ pass: 1, html: pass1Html })
 
-  // ── Pass 2: Visual layer (skip if budget=none AND no placeholders) ──
+  // ── Pass 2: Visual layer (skip if budget=none, navbar, or footer) ──
+  const isChrome = sectionType === 'navbar' || sectionType === 'footer'
   const hasPlaceholders = pass1Html.includes('<!-- [ANIM:') || pass1Html.includes('<!-- [BG:')
   let pass2Html: string | null = null
-  if (dict.rules.animation.budget !== 'none' || hasPlaceholders) {
+  if (!isChrome && (dict.rules.animation.budget !== 'none' || hasPlaceholders)) {
     onProgress?.({ pass: 2 })
     pass2Html = await provider.complete(
       {
@@ -116,7 +125,7 @@ export async function generateSectionStreamed(
   regenOptions?: RegenOptions
 ): Promise<void> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
-  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone)
+  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone, manifest.navbar?.behaviour)
   const { customPrompt, existingHtml, mode = 'full' } = regenOptions ?? {}
 
   const send = (event: object) => writer.write(`data: ${JSON.stringify(event)}\n\n`)
@@ -132,7 +141,7 @@ export async function generateSectionStreamed(
       await provider.stream(
         {
           ...MODEL_CONFIG.pass1_structure,
-          model: 'gpt-4.1-mini',
+          model: 'gpt-5-mini',
           max_tokens: 8000,
           temperature: 0.2,
           system: `You are a precise HTML editor. You receive existing section HTML and a change instruction.
@@ -159,19 +168,27 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
     await provider.stream(
       {
         ...MODEL_CONFIG.pass1_structure,
+        temperature: sectionType === 'navbar' ? 0.7 : MODEL_CONFIG.pass1_structure.temperature,
         system: buildPass1System(dict, manifest, sectionType),
         messages: [{ role: 'user', content: pass1UserMsg }],
       },
       (chunk) => { pass1Html += chunk },
       { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
     )
-    pass1Html = sanitizeImagePaths(pass1Html)
+    if (sectionType === 'navbar') {
+      const nav = manifest.navbar
+      const effectiveBehaviour = nav.behaviour ?? (nav.style === 'transparent-hero' ? 'overlay-hero' : nav.style === 'hidden-scroll' ? 'hide-on-scroll' : 'sticky')
+      const effectiveVisual = nav.visual ?? (nav.style === 'sticky-blur' ? 'blur' : nav.style === 'transparent-hero' ? 'transparent' : 'solid')
+      pass1Html = enforceNavOpener(pass1Html, effectiveBehaviour, effectiveVisual, nav.height)
+    }
+    pass1Html = sanitizeImagePaths(resolveNavbarPlaceholders(pass1Html))
     send({ type: 'pass1', section: sectionType, html: pass1Html })
 
-    // Pass 2 — run if animation budget allows OR if there are unresolved placeholders
+    // Pass 2 — skip for navbar/footer (chrome elements), run if budget allows or placeholders exist
     let finalHtml = pass1Html
+    const isChrome = sectionType === 'navbar' || sectionType === 'footer'
     const hasPlaceholders = pass1Html.includes('<!-- [ANIM:') || pass1Html.includes('<!-- [BG:')
-    if (dict.rules.animation.budget !== 'none' || hasPlaceholders) {
+    if (!isChrome && (dict.rules.animation.budget !== 'none' || hasPlaceholders)) {
       send({ type: 'status', pass: 2, section: sectionType, message: 'Adding visual layer...' })
       let pass2Html = ''
       await provider.stream(

@@ -26,15 +26,18 @@ export class OpenAIProvider implements AIProvider {
     const t0 = Date.now()
     try {
       const isO = params.model.startsWith('o4') || params.model.startsWith('o3')
+      const isGpt5 = params.model.startsWith('gpt-5')
+      const useCompletionTokens = isO || isGpt5
       const res = await client.chat.completions.create({
         model: params.model,
         messages: [
           ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
           ...params.messages,
         ],
-        ...(isO
+        ...(useCompletionTokens
           ? { max_completion_tokens: params.max_tokens }
           : { max_tokens: params.max_tokens, temperature: params.temperature }),
+        ...(params.model === 'gpt-5.4' ? { temperature: params.temperature } : {}),
         ...(params.response_format ? { response_format: params.response_format } : {}),
       })
       const response = res.choices[0]?.message?.content ?? ''
@@ -64,15 +67,18 @@ export class OpenAIProvider implements AIProvider {
     let full = ''
     try {
       const isO = params.model.startsWith('o4') || params.model.startsWith('o3') || params.model.startsWith('o1')
+      const isGpt5 = params.model.startsWith('gpt-5')
+      const useCompletionTokens = isO || isGpt5
       const stream = await client.chat.completions.create({
         model: params.model,
         messages: [
           ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
           ...params.messages,
         ],
-        ...(isO
+        ...(useCompletionTokens
           ? { max_completion_tokens: params.max_tokens }
           : { max_tokens: params.max_tokens, temperature: params.temperature }),
+        ...(params.model === 'gpt-5.4' ? { temperature: params.temperature } : {}),
         stream: true,
       })
       for await (const chunk of stream) {

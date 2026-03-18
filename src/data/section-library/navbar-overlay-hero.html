@@ -1,0 +1,29 @@
+<nav class="absolute top-0 left-0 right-0 z-50 h-16 w-full flex items-center justify-between px-5 md:px-8" style="background: transparent"><!-- [SCROLL-CLASS: nav-scrolled] -->
+  <a href="#" class="font-bold text-lg" style="color: #ffffff; font-family: var(--font-heading)">Acme GmbH</a>
+
+  <ul class="hidden md:flex items-center gap-6">
+    <li><a href="#leistungen" class="text-sm hover:opacity-80 transition-opacity" style="color: rgba(255,255,255,0.8)">Leistungen</a></li>
+    <li><a href="#ablauf" class="text-sm hover:opacity-80 transition-opacity" style="color: rgba(255,255,255,0.8)">Ablauf</a></li>
+    <li><a href="#kontakt" class="text-sm hover:opacity-80 transition-opacity" style="color: rgba(255,255,255,0.8)">Kontakt</a></li>
+  </ul>
+
+  <div class="flex items-center gap-3">
+    <button class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all" style="background-color: var(--color-primary); color: #fff">
+      Erstgespräch buchen
+    </button>
+    <button id="nav-toggle" class="md:hidden flex flex-col gap-1.5 p-2" aria-label="Menü öffnen" onclick="const m=document.getElementById('nav-menu');if(m)m.classList.toggle('hidden')">
+      <span class="w-5 h-0.5 rounded" style="background-color: #ffffff"></span>
+      <span class="w-5 h-0.5 rounded" style="background-color: #ffffff"></span>
+      <span class="w-5 h-0.5 rounded" style="background-color: #ffffff"></span>
+    </button>
+  </div>
+
+  <div id="nav-menu" class="hidden absolute top-16 left-0 right-0 z-40 flex flex-col gap-4 px-5 py-6 md:hidden" style="background-color: var(--color-background)">
+    <a href="#leistungen" class="text-sm font-medium" style="color: var(--color-text)">Leistungen</a>
+    <a href="#ablauf" class="text-sm font-medium" style="color: var(--color-text)">Ablauf</a>
+    <a href="#kontakt" class="text-sm font-medium" style="color: var(--color-text)">Kontakt</a>
+    <button class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold mt-2" style="background-color: var(--color-primary); color: #fff">
+      Erstgespräch buchen
+    </button>
+  </div>
+</nav>

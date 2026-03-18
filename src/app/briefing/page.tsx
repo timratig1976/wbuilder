@@ -11,7 +11,7 @@ import { PageTopbar } from '@/components/ui/PageTopbar'
 import {
   Zap, ChevronRight, ChevronLeft, Loader2, Check, X,
   Building2, Users, Palette, Layout, Sparkles, Globe, Plus, Trash2,
-  Library, Tag, ChevronDown, BookMarked, Save, FolderOpen
+  Library, Tag, ChevronDown, BookMarked, Save, FolderOpen, Upload, ImageIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -102,6 +102,17 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 // ── Step 1: Project ────────────────────────────────────────────────────────
 
 function Step1({ data, onChange }: { data: BriefingData; onChange: (d: Partial<BriefingData>) => void }) {
+  function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string
+      onChange({ logo_url: result })
+    }
+    reader.readAsDataURL(file)
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -109,6 +120,45 @@ function Step1({ data, onChange }: { data: BriefingData; onChange: (d: Partial<B
           <Building2 className="w-5 h-5 text-indigo-600" /> Projektinfos
         </h2>
         <p className="text-sm text-gray-500 mt-1">Grundlegende Infos über das Unternehmen</p>
+      </div>
+
+      {/* Logo Upload */}
+      <div>
+        <label className="text-xs font-semibold text-gray-600 block mb-2">Logo (optional)</label>
+        <div className="flex items-center gap-3">
+          {data.logo_url ? (
+            <div className="relative group">
+              <img
+                src={data.logo_url}
+                alt="Logo preview"
+                className="h-12 max-w-[160px] object-contain rounded-lg border border-gray-200 bg-white p-1.5"
+              />
+              <button
+                onClick={() => onChange({ logo_url: undefined })}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="h-12 w-24 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
+              <ImageIcon className="w-5 h-5 text-gray-300" />
+            </div>
+          )}
+          <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer text-xs font-medium text-gray-600 transition-colors">
+            <Upload className="w-3.5 h-3.5" />
+            {data.logo_url ? 'Logo ersetzen' : 'Logo hochladen'}
+            <input
+              type="file"
+              accept="image/svg+xml,image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleLogoFile}
+            />
+          </label>
+          {data.logo_url && (
+            <p className="text-[10px] text-gray-400">SVG, PNG, JPG, WebP — wird in der Navbar verwendet</p>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -292,6 +342,7 @@ function Step2({ data, onChange }: { data: BriefingData; onChange: (d: Partial<B
 // ── Pattern visual preview helpers ────────────────────────────────────────
 
 const TYPE_META: Record<string, { emoji: string; color: string; bg: string }> = {
+  'navbar':             { emoji: '☰',  color: 'text-sky-700',    bg: 'bg-sky-50'    },
   'section-transition': { emoji: '〰️', color: 'text-blue-700',   bg: 'bg-blue-50'   },
   'background-treatment': { emoji: '🎨', color: 'text-amber-700', bg: 'bg-amber-50'  },
   'card-style':         { emoji: '🃏', color: 'text-teal-700',   bg: 'bg-teal-50'   },
@@ -302,6 +353,16 @@ const TYPE_META: Record<string, { emoji: string; color: string; bg: string }> = 
   'interaction':        { emoji: '👆', color: 'text-orange-700', bg: 'bg-orange-50' },
   'typography':         { emoji: '𝐓',  color: 'text-pink-700',   bg: 'bg-pink-50'   },
 }
+
+// Category groups for the tabbed pattern selector
+const PATTERN_GROUPS: { id: string; label: string; emoji: string; types: string[] }[] = [
+  { id: 'navbar',      label: 'Navigation',        emoji: '☰',  types: ['navbar', 'interaction'] },
+  { id: 'background',  label: 'Backgrounds',        emoji: '🎨', types: ['background-treatment'] },
+  { id: 'dividers',    label: 'Section Dividers',   emoji: '〰️', types: ['section-transition'] },
+  { id: 'cards',       label: 'Cards & Grids',      emoji: '🃏', types: ['card-style', 'grid-pattern', 'hero-layout'] },
+  { id: 'animation',   label: 'Animation & Motion', emoji: '✨', types: ['text-animation', 'scroll-animation'] },
+  { id: 'typography',  label: 'Typography',         emoji: '𝐓',  types: ['typography'] },
+]
 
 const PARADIGM_COLORS: Record<string, string> = {
   'bold-expressive':  'bg-orange-100 text-orange-700',
@@ -500,6 +561,7 @@ function PatternSelector({ data, onChange }: { data: BriefingData; onChange: (d:
   const [loaded, setLoaded] = useState(false)
   const [filter, setFilter] = useState('')
   const [open, setOpen] = useState(false)
+  const [activeGroup, setActiveGroup] = useState('navbar')
 
   function load() {
     if (loaded) return
@@ -571,27 +633,76 @@ function PatternSelector({ data, onChange }: { data: BriefingData; onChange: (d:
               <p className="text-xs text-gray-400">Sites scrapen unter <span className="font-mono">/scraper</span> und Discoveries approven unter <span className="font-mono">/discovery</span>.</p>
             </div>
           ) : (
-            <div className="max-h-[480px] overflow-y-auto px-4 py-4 space-y-4">
-              {/* Matching patterns grid */}
-              {relevant.length > 0 && (
-                <div>
-                  {others.length > 0 && (
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Passend zum Paradigma</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-3">
-                    {relevant.map((p) => <PatternCard key={p.id} p={p} isSelected={data.selected_pattern_ids.includes(p.id)} onToggle={toggle} />)}
-                  </div>
-                </div>
-              )}
-              {/* Other paradigm patterns */}
-              {others.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Andere Paradigmen</p>
-                  <div className="grid grid-cols-2 gap-3 opacity-70">
-                    {others.map((p) => <PatternCard key={p.id} p={p} isSelected={data.selected_pattern_ids.includes(p.id)} onToggle={toggle} />)}
-                  </div>
-                </div>
-              )}
+            <div>
+              {/* Category tabs */}
+              <div className="flex gap-1 px-3 pt-3 pb-0 overflow-x-auto border-b border-gray-100">
+                {PATTERN_GROUPS.map((g) => {
+                  const groupPatterns = filtered.filter((p) => g.types.includes(p.type))
+                  const selectedInGroup = groupPatterns.filter((p) => data.selected_pattern_ids.includes(p.id)).length
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setActiveGroup(g.id)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-semibold whitespace-nowrap transition-all border-b-2 -mb-px ${
+                        activeGroup === g.id
+                          ? 'border-violet-500 text-violet-700 bg-violet-50'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span>{g.emoji}</span>
+                      <span>{g.label}</span>
+                      {selectedInGroup > 0 && (
+                        <span className="text-[9px] bg-violet-600 text-white px-1 py-0.5 rounded-full font-bold">{selectedInGroup}</span>
+                      )}
+                      <span className="text-[9px] text-gray-400">({groupPatterns.length})</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Pattern grid for active group */}
+              <div className="max-h-[400px] overflow-y-auto px-4 py-4">
+                {(() => {
+                  const group = PATTERN_GROUPS.find((g) => g.id === activeGroup)
+                  if (!group) return null
+                  const groupPatterns = filtered.filter((p) => group.types.includes(p.type))
+                  const paradigmMatch = data.style_paradigm
+                    ? groupPatterns.filter((p) => !p.paradigms?.length || p.paradigms.includes(data.style_paradigm))
+                    : groupPatterns
+                  const paradigmOther = data.style_paradigm
+                    ? groupPatterns.filter((p) => p.paradigms?.length && !p.paradigms.includes(data.style_paradigm))
+                    : []
+                  if (groupPatterns.length === 0) {
+                    return (
+                      <div className="py-8 text-center text-xs text-gray-400">
+                        Keine Patterns in dieser Kategorie
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="space-y-4">
+                      {paradigmMatch.length > 0 && (
+                        <div>
+                          {paradigmOther.length > 0 && (
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Passend zum Paradigma</p>
+                          )}
+                          <div className="grid grid-cols-2 gap-3">
+                            {paradigmMatch.map((p) => <PatternCard key={p.id} p={p} isSelected={data.selected_pattern_ids.includes(p.id)} onToggle={toggle} />)}
+                          </div>
+                        </div>
+                      )}
+                      {paradigmOther.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Andere Paradigmen</p>
+                          <div className="grid grid-cols-2 gap-3 opacity-70">
+                            {paradigmOther.map((p) => <PatternCard key={p.id} p={p} isSelected={data.selected_pattern_ids.includes(p.id)} onToggle={toggle} />)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
             </div>
           )}
         </div>
@@ -944,24 +1055,59 @@ function Step4({ data, onChange }: { data: BriefingData; onChange: (d: Partial<B
         <p className="text-sm text-gray-500 mt-1">Wie soll die Navigation aussehen?</p>
       </div>
 
+      {/* Navbar Behaviour — how it moves */}
       <div>
-        <label className="text-xs font-semibold text-gray-600 block mb-2">Navbar-Stil</label>
+        <label className="text-xs font-semibold text-gray-600 block mb-1">Navbar-Verhalten</label>
+        <p className="text-[10px] text-gray-400 mb-2">Wie verhält sich die Navbar beim Scrollen?</p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { value: 'sticky-blur',      label: 'Sticky + Blur',         desc: 'Fixiert, glassmorphism beim Scrollen' },
-            { value: 'static',           label: 'Static',                desc: 'Normal oben, scrollt mit' },
-            { value: 'transparent-hero', label: 'Transparent → Solid',   desc: 'Im Hero transparent, dann weiß' },
-            { value: 'hidden-scroll',    label: 'Auto-Hide',             desc: 'Versteckt beim Scrollen nach unten' },
+            { value: 'sticky',        label: 'Sticky',          desc: 'Bleibt immer oben sichtbar', icon: '📌' },
+            { value: 'overlay-hero',  label: 'Overlay Hero',    desc: 'Liegt über dem Hero, wird beim Scrollen sticky', icon: '🎯' },
+            { value: 'hide-on-scroll',label: 'Auto-Hide',       desc: 'Versteckt beim Runterscrollen, zeigt beim Hochscrollen', icon: '👻' },
+            { value: 'static',        label: 'Static',          desc: 'Scrollt mit — keine fixierte Position', icon: '📄' },
           ].map((n) => (
             <button
               key={n.value}
-              onClick={() => onChange({ navbar_style: n.value as BriefingData['navbar_style'] })}
+              onClick={() => onChange({ navbar_behaviour: n.value as BriefingData['navbar_behaviour'] })}
               className={`p-3 rounded-lg border text-left transition-all ${
-                data.navbar_style === n.value ? 'bg-indigo-50 border-indigo-400' : 'bg-white border-gray-200 hover:border-indigo-200'
+                data.navbar_behaviour === n.value ? 'bg-indigo-50 border-indigo-400' : 'bg-white border-gray-200 hover:border-indigo-200'
               }`}
             >
-              <p className={`text-sm font-medium ${data.navbar_style === n.value ? 'text-indigo-900' : 'text-gray-700'}`}>{n.label}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{n.desc}</p>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-base leading-none">{n.icon}</span>
+                <p className={`text-sm font-medium ${data.navbar_behaviour === n.value ? 'text-indigo-900' : 'text-gray-700'}`}>{n.label}</p>
+                {data.navbar_behaviour === n.value && <Check className="w-3.5 h-3.5 text-indigo-600 ml-auto" />}
+              </div>
+              <p className="text-xs text-gray-400">{n.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Navbar Visual — what it looks like */}
+      <div>
+        <label className="text-xs font-semibold text-gray-600 block mb-1">Navbar-Look</label>
+        <p className="text-[10px] text-gray-400 mb-2">Wie sieht die Navbar aus (unabhängig vom Verhalten)?</p>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { value: 'blur',        label: 'Glassmorphism Blur', desc: 'Semitransparenter Blur-Hintergrund', icon: '🫧' },
+            { value: 'solid',       label: 'Solid',              desc: 'Voller Hintergrund in Background-Farbe', icon: '⬜' },
+            { value: 'transparent', label: 'Transparent',        desc: 'Kein Hintergrund — Inhalt darunter sichtbar', icon: '👁' },
+            { value: 'border',      label: 'Border',             desc: 'Solid + untere Trennlinie', icon: '─' },
+          ].map((v) => (
+            <button
+              key={v.value}
+              onClick={() => onChange({ navbar_visual: v.value as BriefingData['navbar_visual'] })}
+              className={`p-3 rounded-lg border text-left transition-all ${
+                data.navbar_visual === v.value ? 'bg-indigo-50 border-indigo-400' : 'bg-white border-gray-200 hover:border-indigo-200'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-base leading-none">{v.icon}</span>
+                <p className={`text-sm font-medium ${data.navbar_visual === v.value ? 'text-indigo-900' : 'text-gray-700'}`}>{v.label}</p>
+                {data.navbar_visual === v.value && <Check className="w-3.5 h-3.5 text-indigo-600 ml-auto" />}
+              </div>
+              <p className="text-xs text-gray-400">{v.desc}</p>
             </button>
           ))}
         </div>
@@ -1009,6 +1155,8 @@ const defaultData: BriefingData = {
   visual_tone: 'confident' as VisualTone,
   animation_budget: 'moderate',
   navbar_style: 'sticky-blur',
+  navbar_behaviour: 'sticky',
+  navbar_visual: 'blur',
   navbar_mobile: 'hamburger-dropdown',
   has_existing_brand: false,
   primary_color: '',
@@ -1047,6 +1195,8 @@ const DEFAULT_PRESETS: Record<PresetSlot, { label: string; data: BriefingData }>
       visual_tone: 'confident' as VisualTone,
       animation_budget: 'subtle',
       navbar_style: 'sticky-blur',
+      navbar_behaviour: 'sticky',
+      navbar_visual: 'blur',
       navbar_mobile: 'hamburger-dropdown',
       has_existing_brand: true,
       primary_color: '#2C3E2D',
@@ -1084,6 +1234,8 @@ const DEFAULT_PRESETS: Record<PresetSlot, { label: string; data: BriefingData }>
       visual_tone: 'expressive' as VisualTone,
       animation_budget: 'subtle',
       navbar_style: 'sticky-blur',
+      navbar_behaviour: 'sticky',
+      navbar_visual: 'blur',
       navbar_mobile: 'hamburger-dropdown',
       has_existing_brand: true,
       primary_color: '#0A0F1E',
@@ -1121,6 +1273,8 @@ const DEFAULT_PRESETS: Record<PresetSlot, { label: string; data: BriefingData }>
       visual_tone: 'editorial' as VisualTone,
       animation_budget: 'subtle',
       navbar_style: 'transparent-hero',
+      navbar_behaviour: 'overlay-hero',
+      navbar_visual: 'transparent',
       navbar_mobile: 'hamburger-overlay',
       has_existing_brand: true,
       primary_color: '#2A1810',
@@ -1272,6 +1426,8 @@ function BriefingPageInner() {
       visual_tone:      (manifest.visual_tone ?? defaultData.visual_tone) as VisualTone,
       animation_budget: defaultData.animation_budget,
       navbar_style:     (manifest.navbar?.style as BriefingData['navbar_style']) ?? defaultData.navbar_style,
+      navbar_behaviour: (manifest.navbar?.behaviour as BriefingData['navbar_behaviour']) ?? defaultData.navbar_behaviour,
+      navbar_visual:    (manifest.navbar?.visual as BriefingData['navbar_visual']) ?? defaultData.navbar_visual,
       navbar_mobile:    (manifest.navbar?.mobile_menu as BriefingData['navbar_mobile']) ?? defaultData.navbar_mobile,
       brand_colors:     undefined,
       has_existing_brand: !!(manifest.design_tokens?.colors?.primary),
@@ -1332,10 +1488,13 @@ function BriefingPageInner() {
           visual_tone:      data.visual_tone,
           animation_budget: data.animation_budget,
           navbar_style:     data.navbar_style,
+          navbar_behaviour: data.navbar_behaviour,
+          navbar_visual:    data.navbar_visual,
           navbar_mobile:    data.navbar_mobile,
           brand_colors,
           pages,
           selected_pattern_ids: data.selected_pattern_ids,
+          logo_url:         data.logo_url,
         }),
       })
 
@@ -1349,6 +1508,7 @@ function BriefingPageInner() {
       // Override manifest pages with user-defined structure
       const manifestWithPages: SiteManifest = {
         ...manifest,
+        logo_url: data.logo_url,
         pages: pages.map((p, i) => ({
           id:               `page-${i}`,
           slug:             p.slug,

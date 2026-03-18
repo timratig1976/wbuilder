@@ -309,12 +309,15 @@ function PatternSlotEditor({
           <span className="text-sm font-semibold text-gray-800 font-mono">{slotKey}</span>
           <span className="text-xs text-gray-400">{variants.length} variant{variants.length !== 1 ? 's' : ''}</span>
         </div>
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={(e) => { e.stopPropagation(); addVariant() }}
-          className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); addVariant() } }}
+          className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors cursor-pointer"
         >
           <Plus className="w-3 h-3" /> Add variant
-        </button>
+        </div>
       </button>
       {open && (
         <div className="px-4 pb-4 pt-2 space-y-3 bg-gray-50 border-t border-gray-100">

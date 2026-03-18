@@ -440,6 +440,10 @@ export default function BuilderPage() {
     try {
       // v2: use manifest pipeline when manifest is loaded
       const currentManifest = useBuilderStore.getState().manifest
+      if (!currentManifest) {
+        toast.error('No manifest loaded — open a project with a manifest first')
+        return
+      }
       if (currentManifest) {
         const res = await fetch('/api/v2/generate', {
           method: 'POST',
@@ -485,8 +489,8 @@ export default function BuilderPage() {
       const ctx = buildPageContext(section.type, prompt, sectionId, sectionIndex)
       await streamSection(section.type, prompt, customPrompt || undefined, sectionId, ctx, makeRunId(), 'regenerate')
       toast.success('Section regenerated')
-    } catch {
-      toast.error('Regeneration failed')
+    } catch (err) {
+      toast.error(`Regeneration failed: ${String(err).slice(0, 80)}`)
     } finally {
       setSectionGenerating(sectionId, false)
     }

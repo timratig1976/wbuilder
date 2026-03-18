@@ -20,6 +20,8 @@ export interface BriefingData {
   visual_tone: VisualTone
   animation_budget: 'none' | 'subtle' | 'moderate' | 'rich'
   navbar_style: 'sticky-blur' | 'static' | 'transparent-hero' | 'hidden-scroll'
+  navbar_behaviour: 'sticky' | 'overlay-hero' | 'hide-on-scroll' | 'static'
+  navbar_visual: 'blur' | 'solid' | 'transparent' | 'border'
   navbar_mobile: 'hamburger-dropdown' | 'hamburger-overlay' | 'hamburger-sidebar' | 'logo-cta-only'
   brand_colors?: Record<string, string>
   has_existing_brand: boolean
@@ -27,6 +29,7 @@ export interface BriefingData {
   accent_color: string
   pages: PageDef[]
   selected_pattern_ids: string[]
+  logo_url?: string
 }
 
 export interface BriefingPreset {

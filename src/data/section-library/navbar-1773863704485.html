@@ -1,0 +1,35 @@
+<nav class="h-[70px] relative w-full px-6 md:px-16 lg:px-24 xl:px-32 flex items-center justify-between z-30 bg-gradient-to-r from-indigo-700 to-violet-500 transition-all">
+        
+    <a href="#" style="color:var(--color-text);font-family:var(--font-heading)" class="font-bold text-lg tracking-tight">{{COMPANY_NAME}}</a>
+
+    <ul class="md:flex hidden items-center gap-10" style="color:#fff">
+        <li><a class="hover:text-white/70 transition" href="#">Home</a></li>
+        <li><a class="hover:text-white/70 transition" href="#">Services</a></li>
+        <li><a class="hover:text-white/70 transition" href="#">Portfolio</a></li>
+        <li><a class="hover:text-white/70 transition" href="#">Pricing</a></li>
+    </ul>
+
+    <button type="button" class="md:inline hidden text-sm hover:opacity-90 active:scale-95 transition-all w-40 h-11 rounded-full" style="background-color:var(--color-background);color:var(--color-text)">
+        Get started
+    </button>
+
+    <button aria-label="menu-btn" type="button" id="nav-toggle" class=" inline-block md:hidden active:scale-90 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30" fill="#fff">
+            <path d="M3 7a1 1 0 1 0 0 2h24a1 1 0 1 0 0-2zm0 7a1 1 0 1 0 0 2h24a1 1 0 1 0 0-2zm0 7a1 1 0 1 0 0 2h24a1 1 0 1 0 0-2z"/>
+        </svg>
+    </button>
+
+    <div id="nav-menu" class=" absolute top-[70px] left-0 w-full bg-gradient-to-r from-indigo-700 to-violet-500 p-6 hidden md:hidden">
+        <ul class="flex flex-col space-y-4 text-lg" style="color:#fff">
+            <li><a href="#" class="text-sm">Home</a></li>
+            <li><a href="#" class="text-sm">Services</a></li>
+            <li><a href="#" class="text-sm">Portfolio</a></li>
+            <li><a href="#" class="text-sm">Pricing</a></li>
+        </ul>
+        <button type="button" class="mt-6 inline md:hidden text-sm hover:opacity-90 active:scale-95 transition-all w-40 h-11 rounded-full" style="background-color:var(--color-background);color:var(--color-text)">
+            Get started
+        </button>
+    </div>
+</nav>
+
+<script>(function(){var b=document.getElementById('nav-toggle');var m=document.getElementById('nav-menu');if(b&&m)b.addEventListener('click',function(){m.classList.toggle('hidden');});})()</script>

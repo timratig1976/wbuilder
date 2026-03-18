@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
     const {
       company_name, industry, adjectives, tone, primary_cta,
       personas, pain_points, style_paradigm, visual_tone, animation_budget,
-      navbar_style, navbar_mobile, brand_colors, pages,
-      selected_pattern_ids,
+      navbar_style, navbar_behaviour, navbar_visual, navbar_mobile,
+      brand_colors, pages, selected_pattern_ids, logo_url,
     } = body
 
     // Resolve selected pattern IDs to full pattern objects for prompt injection
@@ -36,8 +36,10 @@ export async function POST(req: NextRequest) {
       style_paradigm,
       visual_tone: visual_tone ?? 'confident',
       animation_budget: animation_budget ?? 'moderate',
-      navbar_style: navbar_style ?? 'sticky-blur',
-      navbar_mobile: navbar_mobile ?? 'hamburger-dropdown',
+      navbar_style:     navbar_style     ?? 'sticky-blur',
+      navbar_behaviour: navbar_behaviour ?? 'sticky',
+      navbar_visual:    navbar_visual    ?? 'blur',
+      navbar_mobile:    navbar_mobile    ?? 'hamburger-dropdown',
       brand_colors,
       selected_patterns,
     })
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
         description: p.description,
         type: p.type,
         preview_description: (p as { preview_description?: string }).preview_description,
+        applicable_sections: (p as { applicable_sections?: string[] }).applicable_sections,
         implementation: p.implementation,
       }))
     }
@@ -64,6 +67,9 @@ export async function POST(req: NextRequest) {
         meta_description: manifest.pages[i]?.meta_description ?? '',
       }))
     }
+
+    // Persist logo_url on the manifest if provided
+    if (logo_url) manifest.logo_url = logo_url
 
     return Response.json({ manifest })
   } catch (err) {

@@ -236,10 +236,11 @@ interface PatternEntry {
   id: string; name: string; description: string; type: string
   paradigms: string[]; tags: string[]; confidence: number
   preview_description: string; visual_weight: string
-  implementation?: { css_snippet?: string; html_snippet?: string; placeholder?: string }
+  implementation?: { css_snippet?: string; html_snippet?: string; placeholder?: string; navbar_behaviour?: string; navbar_layout?: string; navbar_structure?: string; navbar_mobile?: string }
 }
 
 const PT_TYPE_META: Record<string, { emoji: string; color: string; bg: string }> = {
+  'navbar':               { emoji: '☰',  color: 'text-sky-700',    bg: 'bg-sky-50'    },
   'section-transition':   { emoji: '〰️', color: 'text-blue-700',   bg: 'bg-blue-50'   },
   'background-treatment': { emoji: '🎨', color: 'text-amber-700',  bg: 'bg-amber-50'  },
   'card-style':           { emoji: '🃏', color: 'text-teal-700',   bg: 'bg-teal-50'   },
@@ -250,6 +251,15 @@ const PT_TYPE_META: Record<string, { emoji: string; color: string; bg: string }>
   'interaction':          { emoji: '👆', color: 'text-orange-700', bg: 'bg-orange-50' },
   'typography':           { emoji: '𝐓',  color: 'text-pink-700',   bg: 'bg-pink-50'   },
 }
+
+const PT_GROUPS: { id: string; label: string; emoji: string; types: string[] }[] = [
+  { id: 'navbar',     label: 'Navigation',        emoji: '☰',  types: ['navbar', 'interaction'] },
+  { id: 'background', label: 'Backgrounds',        emoji: '🎨', types: ['background-treatment'] },
+  { id: 'dividers',   label: 'Dividers',           emoji: '〰️', types: ['section-transition'] },
+  { id: 'cards',      label: 'Cards & Grids',      emoji: '🃏', types: ['card-style', 'grid-pattern', 'hero-layout'] },
+  { id: 'animation',  label: 'Animation',          emoji: '✨', types: ['text-animation', 'scroll-animation'] },
+  { id: 'typography', label: 'Typography',         emoji: '𝐓',  types: ['typography'] },
+]
 const PT_PARADIGM_COLORS: Record<string, string> = {
   'bold-expressive':  'bg-orange-100 text-orange-700',
   'tech-dark':        'bg-slate-200 text-slate-700',
@@ -290,8 +300,30 @@ function PatternPreviewThumb({ p }: { p: PatternEntry }) {
     return <div className="w-full h-full bg-white flex items-center justify-center gap-3 px-2">{['98%','4.9★','12k'].map((v) => <div key={v} className="flex flex-col items-center"><span className="text-indigo-600 font-bold text-sm">{v}</span><div className="h-px w-6 bg-gray-200 mt-0.5"/></div>)}</div>
   if (t === 'scroll-animation')
     return <div className="w-full h-full bg-slate-900 flex items-center justify-center relative overflow-hidden"><div className="absolute left-3 top-0 bottom-0 w-px bg-indigo-500/40"/><div className="space-y-1 pl-6">{[1,2,3].map((i) => <div key={i} className="h-1.5 rounded bg-indigo-400/60" style={{ width:`${(4-i)*16}px` }}/>)}</div></div>
-  if (t === 'interaction')
-    return <div className="w-full h-full bg-slate-900 flex flex-col"><div className="h-5 border-b border-white/10 flex items-center px-2 gap-2"><div className="w-3 h-1 bg-white/60 rounded"/><div className="flex-1"/><div className="w-6 h-1.5 bg-indigo-500 rounded-full"/></div><div className="flex-1 flex items-center justify-center"><div className="w-8 h-5 rounded-md border border-white/10" style={{ backdropFilter:'blur(4px)', background:'rgba(255,255,255,0.05)' }}/></div><span className="text-white/30 text-[9px] font-mono text-center pb-1">nav blur</span></div>
+  if (t === 'navbar' || t === 'interaction') {
+    const behaviour = p.implementation?.navbar_behaviour ?? 'sticky'
+    const layout = p.implementation?.navbar_layout ?? 'logo-left nav-center cta-right'
+    const structure = p.implementation?.navbar_structure ?? 'full-width'
+    const isBoxed = structure === 'boxed'
+    return (
+      <div className="w-full h-full bg-slate-900 flex flex-col">
+        <div className={`h-6 flex items-center px-2 gap-1.5 ${isBoxed ? 'mx-2 mt-1.5 rounded-lg border border-white/10' : 'border-b border-white/10'}`}
+          style={ behaviour === 'overlay-hero' ? { background:'transparent' } : { backdropFilter:'blur(4px)', background:'rgba(255,255,255,0.07)' } }>
+          <div className="w-2 h-2 rounded-sm bg-white/70 flex-shrink-0" />
+          {layout.includes('nav-center') && <div className="flex-1 flex items-center justify-center gap-1">{[1,2,3].map((i) => <div key={i} className="w-3 h-0.5 bg-white/40 rounded" />)}</div>}
+          {layout.includes('nav-right') && <div className="flex-1" />}
+          {layout.includes('nav-split') && <div className="flex gap-1 mr-auto ml-1">{[1,2].map((i) => <div key={i} className="w-3 h-0.5 bg-white/40 rounded" />)}</div>}
+          <div className="w-8 h-2.5 bg-indigo-500 rounded-full flex-shrink-0" />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <span className="text-white/20 text-[8px] font-mono block">{behaviour}</span>
+            <span className="text-white/15 text-[7px] font-mono block">{structure}</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
   if (t === 'typography')
     return <div className="w-full h-full bg-slate-900 flex items-center justify-center px-3"><span className="text-sm font-bold" style={{ background:'linear-gradient(90deg,#818cf8,#f472b6)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Gradient</span></div>
   const meta = PT_TYPE_META[t] ?? { emoji: '◈', bg: 'bg-gray-100' }
@@ -303,6 +335,7 @@ function PatternPickerDrawer({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
   const [detail, setDetail] = useState<string | null>(null)
+  const [activeGroup, setActiveGroup] = useState('navbar')
 
   useEffect(() => {
     fetch('/api/v2/discovery?view=patterns')
@@ -354,8 +387,35 @@ function PatternPickerDrawer({ onClose }: { onClose: () => void }) {
             </p>
           </div>
         ) : (
-          <div className="px-4 py-4 grid grid-cols-2 gap-3">
-            {filtered.map((p) => {
+          <div className="flex flex-col h-full">
+            {/* Category tabs */}
+            <div className="flex gap-0.5 px-3 pt-2 pb-0 overflow-x-auto border-b border-gray-100 flex-shrink-0">
+              {PT_GROUPS.map((g) => {
+                const count = filtered.filter((p) => g.types.includes(p.type)).length
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setActiveGroup(g.id)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-t-lg text-[11px] font-semibold whitespace-nowrap transition-all border-b-2 -mb-px ${
+                      activeGroup === g.id
+                        ? 'border-violet-500 text-violet-700 bg-violet-50'
+                        : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>{g.emoji}</span>
+                    <span>{g.label}</span>
+                    <span className="text-[9px] text-gray-400">({count})</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Pattern grid for active group */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 grid grid-cols-2 gap-3 content-start">
+              {filtered.filter((p) => {
+                const group = PT_GROUPS.find((g) => g.id === activeGroup)
+                return group ? group.types.includes(p.type) : true
+              }).map((p) => {
               const meta = PT_TYPE_META[p.type] ?? { emoji: '◈', color: 'text-gray-500', bg: 'bg-gray-100' }
               const dots = PT_WEIGHT[p.visual_weight ?? 'light'] ?? 1
               const isDetail = detail === p.id
@@ -416,6 +476,7 @@ function PatternPickerDrawer({ onClose }: { onClose: () => void }) {
                 </div>
               )
             })}
+          </div>
           </div>
         )}
       </div>
@@ -669,6 +730,7 @@ function Row({ k, v, mono }: { k: string; v?: string; mono?: boolean }) {
 const MODEL_PRICING: Record<string, { in: number; out: number }> = {
   'gpt-5.4':       { in: 2.50,  out: 15.00 },
   'gpt-5.4-codex': { in: 2.50,  out: 15.00 },
+  'gpt-5-mini':    { in: 0.40,  out: 1.60  },
   'gpt-4.1':       { in: 2.00,  out: 8.00  },
   'gpt-4o':        { in: 2.50,  out: 10.00 },
   'gpt-4o-mini':   { in: 0.15,  out: 0.60  },
@@ -698,7 +760,7 @@ function calcRunCost(logs: import('@/lib/logStore').AICallLog[]): number | null 
 // ── Shared nav button variants ────────────────────────────────────────────
 
 function NavBtn({
-  onClick, href, active, children, variant = 'ghost', disabled,
+  onClick, href, active, children, variant = 'ghost', disabled, target,
 }: {
   onClick?: () => void
   href?: string
@@ -706,6 +768,7 @@ function NavBtn({
   children: React.ReactNode
   variant?: 'ghost' | 'primary' | 'danger' | 'accent'
   disabled?: boolean
+  target?: string
 }) {
   const base = 'inline-flex items-center gap-1.5 text-xs font-medium rounded-md px-2.5 py-1.5 transition-colors whitespace-nowrap select-none'
   const variants = {
@@ -719,7 +782,7 @@ function NavBtn({
       : 'text-violet-600 hover:bg-violet-50 hover:text-violet-800',
   }
   const cls = `${base} ${variants[variant]} ${disabled ? 'opacity-40 pointer-events-none' : ''}`
-  if (href) return <Link href={href} className={cls}>{children}</Link>
+  if (href) return <Link href={href} className={cls} target={target}>{children}</Link>
   return <button onClick={onClick} disabled={disabled} className={cls}>{children}</button>
 }
 
@@ -1038,22 +1101,27 @@ export function Topbar() {
           )}
         </NavBtn>
 
-        <NavBtn href="/discovery" variant="accent">
+        <NavBtn href="/discovery" variant="accent" target="_blank">
           <Compass className="w-3.5 h-3.5" />
           Discovery
         </NavBtn>
 
-        <NavBtn href="/style-rules" variant="accent">
+        <NavBtn href="/style-rules" variant="accent" target="_blank">
           <Tag className="w-3.5 h-3.5" />
           Style Rules
         </NavBtn>
 
-        <NavBtn href="/style-dictionaries" variant="accent">
+        <NavBtn href="/style-dictionaries" variant="accent" target="_blank">
           <Layers className="w-3.5 h-3.5" />
           Dictionaries
         </NavBtn>
 
-        <NavBtn href="/vary" variant="accent">
+        <NavBtn href="/section-library" variant="accent" target="_blank">
+          <FileJson className="w-3.5 h-3.5" />
+          Examples
+        </NavBtn>
+
+        <NavBtn href="/vary" variant="accent" target="_blank">
           <Sparkles className="w-3.5 h-3.5" />
           Vary
         </NavBtn>
