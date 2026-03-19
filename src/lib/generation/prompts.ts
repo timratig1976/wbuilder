@@ -1,5 +1,6 @@
 import { SiteManifest } from '../types/manifest'
 import { StyleDictionary } from '../types/styleDictionary'
+import { pickLayout, buildLayoutBlock } from '../sectionLayouts'
 
 // ═══════════════════════════════════════════════════════
 // MANIFEST GENERATION PROMPT
@@ -332,19 +333,19 @@ ${isChrome ? '' : `LAYOUT RULES (non-negotiable):
 TYPOGRAPHY RULES:
 - Hero H1 size: ${typography.heading_size_hero}
 - Section H2 size: ${typography.heading_size_section}
-- Hero line-height: ${typography.line_height_hero ?? 'leading-tight'} — ALWAYS apply this to every H1 element
-- Section line-height: ${typography.line_height_section ?? 'leading-snug'} — ALWAYS apply this to every H2/H3 element
+- Hero line-height: ${typography.line_height_hero ?? 'leading-[1.1]'} — NON-NEGOTIABLE: apply this class to EVERY H1 element, no exceptions
+- Section line-height: ${typography.line_height_section ?? 'leading-snug'} — NON-NEGOTIABLE: apply this class to EVERY H2 and H3 element
 - Tracking: ${typography.tracking}
 - Gradient text: ${typography.gradient_text_allowed ? 'ALLOWED — use bg-gradient-to-r bg-clip-text text-transparent' : 'NOT ALLOWED'}
 
 RESPONSIVE FONT SCALING (${typography.responsive_scale !== false ? 'ENABLED — required' : 'DISABLED'}):
 ${typography.responsive_scale !== false ? `- ALL headings MUST use responsive size classes — never a single fixed size
-- Hero H1 pattern:  text-3xl sm:text-4xl md:text-5xl lg:${typography.heading_size_hero.replace(/^text-/, 'text-')} ${typography.line_height_hero ?? 'leading-tight'}${typography.heading_weight ? ` ${typography.heading_weight}` : ''}
-- Section H2 pattern: text-2xl sm:text-3xl md:${typography.heading_size_section} ${typography.line_height_section ?? 'leading-snug'}
+- Hero H1 EXACT pattern: ${typography.heading_size_hero} ${typography.line_height_hero ?? 'leading-[1.1]'}${typography.heading_weight ? ` ${typography.heading_weight}` : ''} (MUST include all breakpoint prefixes as shown — never drop the mobile-first text-3xl or text-4xl base)
+- Section H2 EXACT pattern: ${typography.heading_size_section} ${typography.line_height_section ?? 'leading-snug'} (MUST include all breakpoint prefixes as shown)
 - Sub-headings H3: text-xl sm:text-2xl leading-snug
 - Body text: text-sm sm:text-base leading-relaxed
 - NEVER use text-5xl or larger without a smaller mobile prefix (e.g. text-3xl sm:text-5xl)
-- Line-height is CRITICAL on large headings — ${typography.line_height_hero ?? 'leading-tight'} prevents excessive gaps between wrapped lines` : `- Use fixed heading sizes as specified above`}
+- LINE-HEIGHT IS THE #1 MOST COMMON MISTAKE — large headings (text-4xl+) MUST have ${typography.line_height_hero ?? 'leading-[1.1]'} or lines will overlap and look broken` : `- Use fixed heading sizes as specified above`}
 
 COLOR SYSTEM (${color.base} base):
 - Dark sections: ${color.dark_sections_allowed ? 'ALLOWED' : 'NOT ALLOWED'}
@@ -525,6 +526,12 @@ IMAGE RULES (non-negotiable):
 - For logos/icons: use inline SVG or Tailwind icon placeholders — never <img> for logos
 - ALWAYS add meaningful alt attributes to every <img>
 
+OVERLAY / FLOATING CARD RULES (non-negotiable — prevents white box artifacts):
+- NEVER use bg-white or bg-gray-* on cards that overlap a photo or dark background
+- Overlay cards on hero images MUST use glassmorphism: style="background:rgba(0,0,0,0.55);backdrop-filter:blur(12px)" or style="background-color:var(--color-surface);opacity:0.95"
+- Any card with position:absolute or that visually overlaps an image MUST have a dark or semi-transparent background
+- White cards are ONLY allowed on light (background/surface token) section backgrounds — never on dark or photo backgrounds
+
 ══════════════════════════════════
 CSS CUSTOM PROPERTIES
 ══════════════════════════════════
@@ -606,8 +613,19 @@ export function buildPass1User(
   manifest: SiteManifest,
   referenceHtml?: string | null,
   posCtx?: SectionPositionContext,
-  pageIndex?: number
+  pageIndex?: number,
+  seed?: number,
+  layoutId?: string
 ): string {
+  // Layout rotation — deterministic via seed, auto-rotates every 5 min if no seed given
+  const isChromeSec = sectionType === 'navbar' || sectionType === 'footer'
+  const effectiveSeed = seed ?? Math.floor(Date.now() / 300000) % 100
+  const chosenLayout = isChromeSec ? null : pickLayout(sectionType, {
+    seed: effectiveSeed,
+    paradigm: manifest.style_paradigm,
+    layoutId,
+  })
+  const layoutBlock = chosenLayout ? buildLayoutBlock(chosenLayout) : ''
   const content = manifest.content
   const nav = manifest.navbar
 
@@ -773,7 +791,7 @@ PAGE CONTEXT (multi-page site — tailor content for THIS page only):
     return ''
   })()
 
-  return `Create a "${sectionType}" section for:
+  const userMsg = `Create a "${sectionType}" section for:
 Company: ${content.company_name}
 USP: ${content.company_usp}
 Primary CTA: ${content.primary_cta}
@@ -788,6 +806,21 @@ IMAGE RULES (non-negotiable):
 - For avatars/team: https://i.pravatar.cc/150?img=N (N=1–70)
 - Always add descriptive alt text to every <img>
 ${referenceHtml ? `\nREFERENCE SECTION (use as structural inspiration, not copy-paste):\n${referenceHtml.slice(0, 2000)}` : ''}`
+
+  return layoutBlock ? `${layoutBlock}\n\n${userMsg}` : userMsg
+}
+
+// Returns the layout id that would be chosen for a given section + seed — used for logging
+export function resolveLayoutId(
+  sectionType: string,
+  manifest: SiteManifest,
+  seed?: number,
+  layoutId?: string
+): string | undefined {
+  const isChromeSec = sectionType === 'navbar' || sectionType === 'footer'
+  if (isChromeSec) return undefined
+  const effectiveSeed = seed ?? Math.floor(Date.now() / 300000) % 100
+  return pickLayout(sectionType, { seed: effectiveSeed, paradigm: manifest.style_paradigm, layoutId })?.id
 }
 
 // ═══════════════════════════════════════════════════════

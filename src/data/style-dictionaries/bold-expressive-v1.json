@@ -18,7 +18,7 @@
       "heading_size_section": "text-3xl md:text-[3rem]",
       "tracking": "tracking-[-0.025em]",
       "gradient_text_allowed": true,
-      "line_height_hero": "leading-tight",
+      "line_height_hero": "leading-[1.1]",
       "line_height_section": "leading-snug",
       "responsive_scale": true
     },

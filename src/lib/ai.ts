@@ -1,6 +1,7 @@
-import OpenAI from 'openai'
 import { SectionType } from './store'
 import { loadExamples } from './examples'
+import { pickLayout, buildLayoutBlock } from './sectionLayouts'
+import { callProvider, routeGenerate, routeEnhance } from './providers'
 
 export interface AICallLog {
   step: 'classify' | 'generate' | 'enhance'
@@ -16,10 +17,6 @@ export interface AICallLog {
   status: 'success' | 'error' | 'fallback'
   error?: string
 }
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 /**
  * Model selection strategy:
@@ -162,6 +159,23 @@ NEVER wrap your output in markdown code blocks. NEVER write \`\`\`html or \`\`\`
 NEVER write any text before the opening "<" tag or after the closing ">" tag.
 If you wrap your output in \`\`\`html...\`\`\` your response is BROKEN and unusable.
 
+CSS CUSTOM PROPERTIES — MANDATORY COLOR SYSTEM:
+The page assembler injects brand colors as CSS Custom Properties + utility classes.
+You MUST use these classes for ALL brand colors — NEVER hardcode hex values for brand colors:
+
+BACKGROUND:  bg-primary · bg-secondary · bg-accent · bg-dark · bg-surface · bg-highlight
+TEXT:        text-primary · text-accent · text-muted · text-highlight
+BORDER:      border-accent · border-primary
+GRADIENT:    from-primary · from-accent · from-secondary · to-accent · to-primary
+FONT:        font-display (heading font) · font-body (body font)
+
+CORRECT:   <section class="bg-dark">  /  <button class="bg-accent text-white">
+           <h1 class="font-display text-primary">  /  <span class="text-accent">
+FORBIDDEN: <section style="background-color:#0F2645">  /  <button class="bg-[#1E6FFF]">
+
+Standard Tailwind palette (slate-900, gray-50 etc.) is still allowed for
+non-brand elements: overlay backgrounds, shadow colors, neutral text.
+
 You are a world-class UI/UX designer and senior front-end engineer at a top-tier product design agency. You build visually stunning, conversion-optimised marketing websites that win awards. Your output is always production-ready and looks like it was crafted by a funded startup's design team.
 
 Return ONLY raw HTML. No markdown, no code fences, no explanations, no comments.
@@ -197,6 +211,22 @@ DESIGN QUALITY — every output MUST have ALL of these:
 
 The output should feel like it belongs on awwwards.com or siteinspire.com.
 
+PARADIGM RULES — apply strictly when styleParadigm is set:
+
+tech-dark: Backgrounds slate-900/gray-900. Gradient text on headlines (bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent). Glassmorphism cards (bg-white/10 backdrop-blur-md border border-white/10). @keyframes animations required. Electric accents (blue-500, cyan-400, violet-500).
+
+bold-expressive: Mix of dark and light sections. Display font at extreme sizes (text-7xl+). Overlapping elements allowed. Rich @keyframes animations. Concave or diagonal section transitions. One dominant brand-color block per section.
+
+minimal-clean: Light backgrounds only (white or gray-50). Zero animations. Max 1 accent color. Generous whitespace (py-32+). font-light headings. No glassmorphism. No decorative orbs.
+
+luxury-editorial: Cream (#faf9f5) or white background. Serif display font (font-serif or Playfair Display via @import). Extreme whitespace. Thin divider lines only. Almost no decoration. Never dark backgrounds.
+
+brutalist: Background #f2efe8 or white. ALL borders: border-2 border-black (no exceptions). border-radius: 0 everywhere — cards, buttons, inputs, images all sharp. No box-shadow. No glassmorphism. No gradient backgrounds. font-black sans-serif. Accent color ONLY on primary CTA button fill. Hover CTA: accent → black bg + white text. No @keyframes. Offset shadows only: box-shadow: 4px 4px 0 black.
+
+bento-grid: Asymmetric CSS Grid layout for main content. Mixed column spans. 2px gap on dark background. Information-dense.
+
+Default if no paradigm: bold-expressive.
+
 OUTPUT INTEGRITY — these rules are absolute:
 - NEVER truncate the output. Always return the COMPLETE, fully-formed HTML.
 - NEVER use placeholders like "<!-- rest of section -->" or "<!-- add more items here -->"
@@ -205,9 +235,12 @@ OUTPUT INTEGRITY — these rules are absolute:
 - The HTML must be self-contained and renderable as-is in a browser with Tailwind CDN.
 - Do not add any text before or after the HTML — the very first character of your response must be "<" and the very last must be ">".`
 
-function buildSystemPrompt(type: SectionType): string {
+function buildSystemPrompt(type: SectionType, layoutBlock?: string): string {
   const hint = SECTION_HINTS[type]
-  return hint ? `${BASE_SYSTEM_PROMPT}\n\nSECTION-SPECIFIC GUIDANCE: ${hint}` : BASE_SYSTEM_PROMPT
+  const parts = [BASE_SYSTEM_PROMPT]
+  if (layoutBlock) parts.push(layoutBlock)
+  if (hint) parts.push(`SECTION-SPECIFIC GUIDANCE:\n${hint}`)
+  return parts.join('\n\n')
 }
 
 export interface GenerateResult {
@@ -226,6 +259,7 @@ export interface BrandContext {
   fontFamily?: string
   borderRadius?: string
   tone?: string
+  styleParadigm?: string   // 'tech-dark' | 'bold-expressive' | 'brutalist' etc.
   extraNotes?: string
 }
 
@@ -294,6 +328,9 @@ function buildBrandBlock(brand?: BrandContext): string {
   if (brand.fontFamily) lines.push(`- Font family: ${brand.fontFamily} — apply to all text elements via inline style or a @import in a <style> tag`)
   if (brand.borderRadius) lines.push(`- Shape style: ${brand.borderRadius} — apply to ALL buttons, cards, badges, inputs, image containers, icon boxes`)
   if (brand.tone) lines.push(`- Visual tone: ${brand.tone} — this defines the overall aesthetic. Adapt background colours, heading weights, spacing density, and decorative style to match this tone precisely`)
+  if (brand.styleParadigm) lines.push(
+    `- Visual paradigm: ${brand.styleParadigm} — apply the PARADIGM RULES for this style (defined in system prompt)`
+  )
   if (brand.extraNotes) lines.push(`- Additional design rules (MUST follow): ${brand.extraNotes}`)
   if (lines.length === 0) return ''
   return `\n\nBRAND IDENTITY (these rules are MANDATORY and override all other design decisions):\n${lines.join('\n')}\nDo not use colours, fonts, or shapes that conflict with these brand settings.`
@@ -307,7 +344,17 @@ export async function generateSection(
   brand?: BrandContext,
   pageContext?: PageContext
 ): Promise<GenerateResult> {
-  const examples = loadExamples(type)
+  const seed = Math.floor(Date.now() / 300000) % 100  // wechselt alle 5 Min
+  const layout = pickLayout(type, {
+    seed,
+    paradigm: brand?.styleParadigm ?? brand?.tone,
+  })
+  const layoutBlock = layout ? buildLayoutBlock(layout) : ''
+
+  const examples = loadExamples(type, {
+    layoutId: layout?.id,
+    paradigm: brand?.styleParadigm,
+  })
   const exampleContext = examples.length > 0
     ? `\n\nREFERENCE EXAMPLE (style inspiration only — do NOT copy verbatim, adapt to the page context):\n${examples[0].html.slice(0, 1200)}`
     : ''
@@ -326,115 +373,52 @@ export async function generateSection(
     exampleContext,
   ].filter(Boolean).join('\n')
 
-  const cfg = MODEL_CONFIG[type] ?? MODEL_CONFIG.custom
-  const systemPrompt = buildSystemPrompt(type)
-  const models = [cfg.primary, cfg.fallback]
-  let fallbackUsed = false
+  const systemPrompt = buildSystemPrompt(type, layoutBlock)
+  const route = routeGenerate(type)
+  const t0 = Date.now()
 
-  console.log(`[AI] ${type} → ${cfg.primary} (t=${cfg.temperature}, max=${cfg.maxTokens})`)
+  console.log(`[AI] ${type} → ${route.provider}/${route.model} (t=${route.temperature}, max=${route.maxTokens})`)
 
-  for (const model of models) {
-    const t0 = Date.now()
-    try {
-      let html = ''
-
-      const isCodex = model.includes('codex')
-
-      if (isCodex) {
-        // Codex models use the responses API (not chat completions)
-        const input = `${systemPrompt}\n\n${userMessage}`
-        if (onChunk) {
-          const stream = await openai.responses.create({
-            model,
-            input,
-            max_output_tokens: cfg.maxTokens,
-            stream: true,
-          } as any) as any
-          for await (const event of stream) {
-            const delta = event?.delta ?? event?.choices?.[0]?.delta?.content ?? ''
-            if (delta) { html += delta; onChunk(delta) }
-          }
-        } else {
-          const res = await openai.responses.create({
-            model,
-            input,
-            max_output_tokens: cfg.maxTokens,
-          } as any) as any
-          html = res.output_text ?? res.output?.[0]?.content?.[0]?.text ?? ''
-        }
-      } else {
-        // Chat completions for all non-codex models
-        const isGPT5Plus = model.startsWith('gpt-5') || model.startsWith('o1') || model.startsWith('o3')
-        const maxTokensParam = isGPT5Plus ? 'max_completion_tokens' : 'max_tokens'
-        const baseParams = {
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMessage },
-          ],
-          [maxTokensParam]: cfg.maxTokens,
-          temperature: cfg.temperature,
-        }
-        if (onChunk) {
-          const stream = await openai.chat.completions.create({ ...baseParams, stream: true } as any) as any
-          for await (const chunk of stream) {
-            const delta = chunk.choices[0]?.delta?.content ?? ''
-            if (delta) { html += delta; onChunk(delta) }
-          }
-        } else {
-          const res = await openai.chat.completions.create(baseParams as any)
-          html = res.choices[0]?.message?.content ?? ''
-        }
-      }
-
-      const cleaned = cleanHtml(html)
-      return {
-        html: cleaned,
-        log: {
-          step: 'generate',
-          sectionType: type,
-          model,
-          fallbackUsed,
-          systemPrompt,
-          userMessage,
-          outputHtml: cleaned,
-          inputTokensEst: Math.ceil((systemPrompt.length + userMessage.length) / 4),
-          outputTokensEst: Math.ceil(cleaned.length / 4),
-          durationMs: Date.now() - t0,
-          status: fallbackUsed ? 'fallback' : 'success',
-        },
-      }
-    } catch (err: unknown) {
-      const isRateLimit = err instanceof OpenAI.APIError && err.status === 429
-      const isModelNotFound = err instanceof OpenAI.APIError && err.status === 404
-      const isBadRequest = err instanceof OpenAI.APIError && err.status === 400
-      if (isRateLimit || isModelNotFound || isBadRequest) {
-        console.warn(`[AI] ${model} failed, trying fallback ${cfg.fallback}...`)
-        fallbackUsed = true
-        continue
-      }
-      const msg = err instanceof Error ? err.message : String(err)
-      return {
-        html: `<!-- ERROR: ${msg} -->`,
-        log: {
-          step: 'generate',
-          sectionType: type,
-          model,
-          fallbackUsed,
-          systemPrompt,
-          userMessage,
-          outputHtml: '',
-          inputTokensEst: Math.ceil((systemPrompt.length + userMessage.length) / 4),
-          outputTokensEst: 0,
-          durationMs: Date.now() - t0,
-          status: 'error',
-          error: msg,
-        },
-      }
+  try {
+    const html = await callProvider({
+      provider: route.provider, model: route.model,
+      system: systemPrompt, user: userMessage,
+      maxTokens: route.maxTokens, temperature: route.temperature, onChunk,
+    })
+    const cleaned = cleanHtml(html)
+    return {
+      html: cleaned,
+      log: {
+        step: 'generate', sectionType: type,
+        model: `${route.provider}/${route.model}`,
+        fallbackUsed: false, systemPrompt, userMessage,
+        outputHtml: cleaned,
+        inputTokensEst:  Math.ceil((systemPrompt.length + userMessage.length) / 4),
+        outputTokensEst: Math.ceil(cleaned.length / 4),
+        durationMs: Date.now() - t0, status: 'success',
+      },
+    }
+  } catch (err) {
+    console.warn(`[AI] ${route.provider}/${route.model} failed → fallback gpt-5.4-mini`)
+    const html = await callProvider({
+      provider: 'openai', model: 'gpt-5.4-mini',
+      system: systemPrompt, user: userMessage,
+      maxTokens: route.maxTokens, temperature: route.temperature, onChunk,
+    })
+    const cleaned = cleanHtml(html)
+    return {
+      html: cleaned,
+      log: {
+        step: 'generate', sectionType: type,
+        model: 'openai/gpt-5.4-mini (fallback)',
+        fallbackUsed: true, systemPrompt, userMessage,
+        outputHtml: cleaned,
+        inputTokensEst:  Math.ceil((systemPrompt.length + userMessage.length) / 4),
+        outputTokensEst: Math.ceil(cleaned.length / 4),
+        durationMs: Date.now() - t0, status: 'fallback',
+      },
     }
   }
-
-  throw new Error('All models failed')
 }
 
 // ─── Pass 2: Enhance/Validate ────────────────────────────────────────────────
@@ -497,100 +481,55 @@ export async function enhanceSection(
   pagePrompt: string
 ): Promise<EnhanceResult> {
   const t0 = Date.now()
-  const models = ['gpt-4.1', 'gpt-4o']
   const userMessage = `SECTION TYPE: ${type}
 PAGE CONTEXT: ${pagePrompt}
 
 RAW HTML TO ENHANCE:
 ${rawHtml}`
 
-  for (const model of models) {
-    try {
-      const isCodex = model.includes('codex')
-      let content: string
-      if (isCodex) {
-        const res = await openai.responses.create({
-          model,
-          input: `${ENHANCE_SYSTEM_PROMPT}\n\n${userMessage}`,
-          max_output_tokens: 6000,
-        } as any) as any
-        content = res.output_text ?? res.output?.[0]?.content?.[0]?.text ?? '{}'
-      } else {
-        const isGPT5Plus = model.startsWith('gpt-5')
-        const maxTokensParam = isGPT5Plus ? 'max_completion_tokens' : 'max_tokens'
-        const res = await openai.chat.completions.create({
-          model,
-          messages: [
-            { role: 'system', content: ENHANCE_SYSTEM_PROMPT },
-            { role: 'user', content: userMessage },
-          ],
-          [maxTokensParam]: 6000,
-          temperature: 0.3,
-          response_format: { type: 'json_object' },
-        } as any)
-        content = res.choices[0]?.message?.content ?? '{}'
-      }
-      let extractedHtml = rawHtml
-      try {
-        const parsed = JSON.parse(content)
-        extractedHtml = parsed.html ?? rawHtml
-      } catch {
-        extractedHtml = content // fallback: treat whole response as HTML
-      }
-      const html = cleanHtml(extractedHtml)
-      return {
-        html,
-        log: {
-          step: 'enhance',
-          sectionType: type,
-          model,
-          fallbackUsed: model !== 'gpt-4.1',
-          systemPrompt: ENHANCE_SYSTEM_PROMPT,
-          userMessage,
-          outputHtml: html,
-          inputTokensEst: Math.ceil((ENHANCE_SYSTEM_PROMPT.length + userMessage.length) / 4),
-          outputTokensEst: Math.ceil(html.length / 4),
-          durationMs: Date.now() - t0,
-          status: model !== 'gpt-4.1' ? 'fallback' : 'success',
-        },
-      }
-    } catch (err) {
-      const isRateLimit = err instanceof OpenAI.APIError && err.status === 429
-      const isModelNotFound = err instanceof OpenAI.APIError && err.status === 404
-      const isBadRequest = err instanceof OpenAI.APIError && err.status === 400
-      if ((isRateLimit || isModelNotFound || isBadRequest) && model !== models[models.length - 1]) {
-        console.warn(`[AI] enhance ${model} failed, trying fallback...`)
-        continue
-      }
-      const msg = err instanceof Error ? err.message : String(err)
-      return {
-        html: rawHtml,
-        log: {
-          step: 'enhance',
-          sectionType: type,
-          model,
-          fallbackUsed: false,
-          systemPrompt: ENHANCE_SYSTEM_PROMPT,
-          userMessage,
-          outputHtml: rawHtml,
-          inputTokensEst: Math.ceil((ENHANCE_SYSTEM_PROMPT.length + userMessage.length) / 4),
-          outputTokensEst: 0,
-          durationMs: Date.now() - t0,
-          status: 'error',
-          error: msg,
-        },
-      }
-    }
-  }
+  const route = routeEnhance()
 
-  return {
-    html: rawHtml,
-    log: {
-      step: 'enhance', sectionType: type, model: 'gpt-4.1', fallbackUsed: true,
-      systemPrompt: ENHANCE_SYSTEM_PROMPT, userMessage, outputHtml: rawHtml,
-      inputTokensEst: 0, outputTokensEst: 0, durationMs: Date.now() - t0,
-      status: 'error', error: 'All enhance models failed',
-    },
+  try {
+    const content = await callProvider({
+      provider: route.provider, model: route.model,
+      system: ENHANCE_SYSTEM_PROMPT, user: userMessage,
+      maxTokens: route.maxTokens, temperature: route.temperature,
+    })
+
+    // Claude gibt direkt HTML oder JSON — beide Fälle abfangen
+    let extractedHtml = rawHtml
+    if (content.trim().startsWith('{')) {
+      try { extractedHtml = JSON.parse(content).html ?? rawHtml } catch { /* ignore */ }
+    } else if (content.trim().startsWith('<')) {
+      extractedHtml = content
+    }
+
+    const html = cleanHtml(extractedHtml)
+    return {
+      html,
+      log: {
+        step: 'enhance', sectionType: type,
+        model: `${route.provider}/${route.model}`,
+        fallbackUsed: false, systemPrompt: ENHANCE_SYSTEM_PROMPT, userMessage,
+        outputHtml: html,
+        inputTokensEst:  Math.ceil((ENHANCE_SYSTEM_PROMPT.length + userMessage.length) / 4),
+        outputTokensEst: Math.ceil(html.length / 4),
+        durationMs: Date.now() - t0, status: 'success',
+      },
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return {
+      html: rawHtml,
+      log: {
+        step: 'enhance', sectionType: type,
+        model: `${route.provider}/${route.model}`,
+        fallbackUsed: false, systemPrompt: ENHANCE_SYSTEM_PROMPT, userMessage,
+        outputHtml: rawHtml,
+        inputTokensEst: 0, outputTokensEst: 0,
+        durationMs: Date.now() - t0, status: 'error', error: msg,
+      },
+    }
   }
 }
 
@@ -666,11 +605,10 @@ function cleanHtml(raw: string): string {
     .replace(/<link\b[^>]*fonts\.googleapis[^>]*>/gi, '')
     // Strip @import rules inside <style> tags (font imports duplicated from assembler head)
     .replace(/@import\s+url\([^)]+\);?\s*/gi, '')
-    // Remove arbitrary Tailwind value classes e.g. from-[#abc123], bg-[rgba(...)]
-    // Also clean up dangling gradient classes left after removal e.g. "bg-gradient-to-r  py-"
-    .replace(/\b[\w-]+-\[#[0-9a-fA-F]{3,8}\]/g, '')
+    // rgba() entfernen — hex-Farben (#abc, #aabbcc) BEHALTEN
     .replace(/\b[\w-]+-\[rgba?\([^\]]+\)\]/g, '')
-    .replace(/\b[\w-]+-\[\d+(?:px|rem|em|%|vh|vw)?\]/g, '')
+    // nur Layout-px entfernen (w-, h-, gap- etc.)
+    .replace(/\b(?:w|h|min-w|max-w|min-h|max-h|top|left|right|bottom|gap|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr)-\[\d+px\]/g, '')
     // Replace non-CDN colors: slate-950 → slate-900, slate-925 → slate-900 (v3 CDN stops at 900)
     .replace(/\bslate-9[5-9]0\b/g, 'slate-900')
     .replace(/\bgray-9[5-9]0\b/g, 'gray-900')

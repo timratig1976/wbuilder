@@ -5,7 +5,7 @@ import { provider, MODEL_CONFIG } from '../ai/models'
 import { safeParseJson, applyAutoFixes, sanitizeImagePaths, resolveNavbarPlaceholders, enforceNavOpener } from './autoFix'
 import { designSpecFromDict } from '../style/styleDictionary'
 import {
-  buildPass1System, buildPass1User,
+  buildPass1System, buildPass1User, resolveLayoutId,
   buildPass2System, buildPass2User,
   buildPass3User, PASS3_SYSTEM,
   COHERENCE_SYSTEM, buildCoherenceUser,
@@ -38,6 +38,7 @@ export async function generateSection(
 
   // ── Pass 1: Structure ─────────────────────────────────
   onProgress?.({ pass: 1 })
+  const layoutId = resolveLayoutId(sectionType, manifest)
   let pass1Html = await provider.complete(
     {
       ...MODEL_CONFIG.pass1_structure,
@@ -45,7 +46,7 @@ export async function generateSection(
       system: buildPass1System(dict, manifest, sectionType),
       messages: [{ role: 'user', content: buildPass1User(sectionType, manifest, referenceHtml, posCtx, pageIndex) }],
     },
-    { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
+    { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure [layout:${layoutId ?? 'none'}]` }
   )
   if (sectionType === 'navbar') {
     const nav = manifest.navbar
@@ -56,11 +57,12 @@ export async function generateSection(
   pass1Html = resolveNavbarPlaceholders(pass1Html)
   onProgress?.({ pass: 1, html: pass1Html })
 
-  // ── Pass 2: Visual layer (skip if budget=none, navbar, or footer) ──
+  // ── Pass 2: Visual layer (skip only for navbar/footer chrome) ──
+  // budget:none suppresses animations but NOT the visual layer — desktop layout/depth always needs Pass 2
   const isChrome = sectionType === 'navbar' || sectionType === 'footer'
   const hasPlaceholders = pass1Html.includes('<!-- [ANIM:') || pass1Html.includes('<!-- [BG:')
   let pass2Html: string | null = null
-  if (!isChrome && (dict.rules.animation.budget !== 'none' || hasPlaceholders)) {
+  if (!isChrome) {
     onProgress?.({ pass: 2 })
     pass2Html = await provider.complete(
       {
@@ -111,6 +113,8 @@ interface RegenOptions {
   customPrompt?: string
   existingHtml?: string
   mode?: 'full' | 'content-edit'
+  seed?: number
+  layoutId?: string
 }
 
 export async function generateSectionStreamed(
@@ -126,7 +130,8 @@ export async function generateSectionStreamed(
 ): Promise<void> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
   const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone, manifest.navbar?.behaviour)
-  const { customPrompt, existingHtml, mode = 'full' } = regenOptions ?? {}
+  const { customPrompt, existingHtml, mode = 'full', seed, layoutId: requestedLayoutId } = regenOptions ?? {}
+  const chosenLayoutId = resolveLayoutId(sectionType, manifest, seed, requestedLayoutId)
 
   const send = (event: object) => writer.write(`data: ${JSON.stringify(event)}\n\n`)
 
@@ -160,10 +165,10 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
     }
 
     // Pass 1
-    send({ type: 'status', pass: 1, section: sectionType, message: 'Generating structure...' })
+    send({ type: 'status', pass: 1, section: sectionType, message: `Generating structure... [layout:${chosenLayoutId ?? 'none'}]` })
     let pass1Html = ''
     // Append customPrompt as additional instruction when provided
-    const pass1UserMsg = buildPass1User(sectionType, manifest, referenceHtml, posCtx, pageIndex)
+    const pass1UserMsg = buildPass1User(sectionType, manifest, referenceHtml, posCtx, pageIndex, seed, requestedLayoutId)
       + (customPrompt ? `\n\nADDITIONAL INSTRUCTION (apply this on top of the standard rules): ${customPrompt}` : '')
     await provider.stream(
       {
@@ -182,13 +187,14 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
       pass1Html = enforceNavOpener(pass1Html, effectiveBehaviour, effectiveVisual, nav.height)
     }
     pass1Html = sanitizeImagePaths(resolveNavbarPlaceholders(pass1Html))
-    send({ type: 'pass1', section: sectionType, html: pass1Html })
+    send({ type: 'pass1', section: sectionType, html: pass1Html, layoutId: chosenLayoutId })
 
-    // Pass 2 — skip for navbar/footer (chrome elements), run if budget allows or placeholders exist
+    // Pass 2 — skip only for navbar/footer (chrome elements)
+    // budget:none suppresses animations but NOT the visual layer — desktop layout/depth always needs Pass 2
     let finalHtml = pass1Html
     const isChrome = sectionType === 'navbar' || sectionType === 'footer'
     const hasPlaceholders = pass1Html.includes('<!-- [ANIM:') || pass1Html.includes('<!-- [BG:')
-    if (!isChrome && (dict.rules.animation.budget !== 'none' || hasPlaceholders)) {
+    if (!isChrome) {
       send({ type: 'status', pass: 2, section: sectionType, message: 'Adding visual layer...' })
       let pass2Html = ''
       await provider.stream(
@@ -223,7 +229,7 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
       send({ type: 'status', pass: 3, section: sectionType, message: 'Validation skipped' })
     }
 
-    send({ type: 'complete', section: sectionType, html: finalHtml, score: 80 })
+    send({ type: 'complete', section: sectionType, html: finalHtml, score: 80, layoutId: chosenLayoutId })
   } finally {
     writer.close()
   }
