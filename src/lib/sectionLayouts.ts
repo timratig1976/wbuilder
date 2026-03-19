@@ -10,32 +10,32 @@ export const HERO_LAYOUTS: SectionLayout[] = [
   {
     id: 'hero-split',
     name: 'Split Screen',
-    prompt: `LAYOUT: 2 Spalten (45%/55%). Links: Eyebrow + Headline (text-5xl+) + Subline + CTA-Stack + Statistik-Zeile unten. Rechts: dominantes Produkt-Panel volle Höhe. Dünne vertikale Trennlinie.`,
+    prompt: `LAYOUT: 2 columns (45%/55%). Left: Eyebrow + Headline (text-5xl+) + Subline + CTA stack + stats row at bottom. Right: dominant product panel full height. Thin vertical dividing line.`,
     forbidden: ['centered headline', 'three equal panels'],
   },
   {
     id: 'hero-bento',
     name: 'Bento Grid',
-    prompt: `LAYOUT: CSS Grid grid-template-columns:2fr 1.25fr 1.35fr, 2 Zeilen, 2px Gap auf dunklem BG. Karte A (Sp.1, Z.1+2): Headline+CTA. Karte B (Sp.2, Z.1): Stats. Karte C (Sp.3, Z.1+2): Live-Demo. Karte D (Sp.2, Z.2): Plattform-Badges. KEIN klassisches Hero.`,
+    prompt: `LAYOUT: CSS Grid grid-template-columns:2fr 1.25fr 1.35fr, 2 rows, 2px gap on dark BG. Card A (col 1, row 1+2): Headline+CTA. Card B (col 2, row 1): Stats. Card C (col 3, row 1+2): Live demo. Card D (col 2, row 2): Platform badges. NO classic hero layout.`,
     forbidden: ['traditional hero layout', 'single large image', 'centered headline'],
   },
   {
     id: 'hero-centered',
     name: 'Centered + Panels',
-    prompt: `LAYOUT: Headline zentriert oben (text-6xl+). Darunter: Mono-Subline links + CTA rechts. Darunter: 2-3 floatende Content-Panels nebeneinander. Hintergrund: dunkel mit Dot-Grid.`,
+    prompt: `LAYOUT: Headline centered at top (text-6xl+). Below: mono subline left + CTA right. Below that: 2-3 floating content panels side by side. Background: dark with dot-grid.`,
     forbidden: ['split-screen', 'image right', 'single screenshot'],
   },
   {
     id: 'hero-editorial',
     name: 'Editorial Oversized Type',
-    prompt: `LAYOUT: Jedes Wort der Headline auf eigener Zeile, volle Breite. font-size:clamp(3rem,12vw,10rem), font-weight:800, line-height:0.91. Darunter: Monospace-Subline + ein CTA. Kein Mockup. Die Typografie IS das Visual.`,
+    prompt: `LAYOUT: Each word of the headline on its own line, full width. font-size:clamp(3rem,12vw,10rem), font-weight:800, line-height:0.91. Below: monospace subline + one CTA. No mockup. The typography IS the visual.`,
     forbidden: ['normal headline size', 'product mockup', 'split layout'],
     paradigms: ['luxury-editorial', 'bold-expressive', 'brutalist'],
   },
   {
     id: 'hero-bottom-anchored',
     name: 'Bottom Anchored',
-    prompt: `LAYOUT: Visual dominiert obere 60% — volle Breite. Headline + Subline + CTA am UNTEREN Rand verankert, leicht überlappend. Wie ein Magazin-Cover.`,
+    prompt: `LAYOUT: Visual dominates top 60% — full width. Headline + subline + CTA anchored at the BOTTOM edge, slightly overlapping. Like a magazine cover.`,
     forbidden: ['text at top or center', 'classic stacked layout'],
     paradigms: ['luxury-editorial', 'bold-expressive'],
   },
@@ -45,25 +45,25 @@ export const FEATURES_LAYOUTS: SectionLayout[] = [
   {
     id: 'features-bento',
     name: 'Bento Grid',
-    prompt: `LAYOUT: Asymmetrisches Grid. 2 große Karten (spanning 2 Spalten, mit Mini-Demo-SVG) + 4 kleine Karten. Keine gleichgroßen Karten.`,
+    prompt: `LAYOUT: Asymmetric grid. 2 large cards (spanning 2 columns, with mini demo SVG) + 4 small cards. No equal-size cards.`,
     forbidden: ['equal-size cards', 'symmetric 3-column grid'],
   },
   {
     id: 'features-alternating',
     name: 'Alternating Rows',
-    prompt: `LAYOUT: Abwechselnde 2-Spalten-Zeilen über volle Breite. Ungerade: Text links + Visual rechts. Gerade: Visual links + Text rechts. Min 4 Features.`,
+    prompt: `LAYOUT: Alternating 2-column rows across full width. Odd rows: text left + visual right. Even rows: visual left + text right. Minimum 4 features.`,
     forbidden: ['grid of cards', 'all same direction'],
   },
   {
     id: 'features-tabbed',
     name: 'Tabbed',
-    prompt: `LAYOUT: 5-6 Feature-Tabs horizontal oben. Darunter: Tab-Content (Beschreibung 45% + Visual 55%). Erster Tab aktiv. JS-Toggle zwischen Tabs.`,
+    prompt: `LAYOUT: 5-6 feature tabs horizontal at top. Below: tab content (description 45% + visual 55%). First tab active. JS toggle between tabs.`,
     forbidden: ['static all-visible grid', 'no interactivity'],
   },
   {
     id: 'features-spotlight',
     name: 'Spotlight',
-    prompt: `LAYOUT: Ein großes Hero-Feature (60% Breite, volles Bleed). Daneben/darunter: 3-4 sekundäre Features kompakt.`,
+    prompt: `LAYOUT: One large hero feature (60% width, full bleed). Beside/below: 3-4 secondary features compact.`,
     forbidden: ['equal feature sizes', 'symmetric grid'],
   },
 ]
@@ -72,19 +72,19 @@ export const CTA_LAYOUTS: SectionLayout[] = [
   {
     id: 'cta-centered-glow',
     name: 'Centered Glow',
-    prompt: `LAYOUT: Dunkler BG. Inhalt zentriert (max-w-3xl). Große Headline + Subline + primärer CTA + sekundärer Text-Link. Radialer Glow + animierte Gradient-Orbs.`,
+    prompt: `LAYOUT: Dark background. Content centered (max-w-3xl). Large headline + subline + primary CTA + secondary text link. Radial glow + animated gradient orbs.`,
     forbidden: ['split layout', 'light background'],
   },
   {
     id: 'cta-split-visual',
     name: 'Split Visual',
-    prompt: `LAYOUT: Split-Screen. Links 55%: Headline + Subline + CTAs + Trust-Zeile. Rechts 45%: Produkt-Visual. Gradient-Hintergrund.`,
+    prompt: `LAYOUT: Split-screen. Left 55%: Headline + subline + CTAs + trust row. Right 45%: product visual. Gradient background.`,
     forbidden: ['centered layout', 'dark-only background'],
   },
   {
     id: 'cta-floating-card',
     name: 'Floating Card',
-    prompt: `LAYOUT: Große schwebende Karte (max-w-5xl, mx-auto) mit Brand-Gradient. Zentrierter Inhalt darin. Karte auf dunklem Seiten-BG. rounded-3xl, shadow-2xl.`,
+    prompt: `LAYOUT: Large floating card (max-w-5xl, mx-auto) with brand gradient. Content centered inside. Card on dark page background. rounded-3xl, shadow-2xl.`,
     forbidden: ['full-width flat background', 'left-aligned content'],
   },
 ]
@@ -93,13 +93,13 @@ export const STATS_LAYOUTS: SectionLayout[] = [
   {
     id: 'stats-dark-row',
     name: 'Dark Bold Row',
-    prompt: `LAYOUT: Dunkler BG. 4-5 Stats horizontal. Jede: riesige Zahl (text-5xl+, font-black, Accent) + Einheit + Label. Vertikale Trennlinien zwischen Stats.`,
+    prompt: `LAYOUT: Dark background. 4-5 stats horizontal. Each: huge number (text-5xl+, font-black, accent color) + unit + label. Vertical dividers between stats.`,
     forbidden: ['light background', 'card per stat'],
   },
   {
     id: 'stats-grid-cards',
     name: 'Grid Cards',
-    prompt: `LAYOUT: 2×2 oder 2×3 Grid aus Stat-Karten. Heller Surface-BG. Karten: border, hover-lift.`,
+    prompt: `LAYOUT: 2×2 or 2×3 grid of stat cards. Light surface background. Cards: border, hover-lift.`,
     forbidden: ['dark full-bleed', 'flat horizontal row'],
   },
 ]
@@ -108,13 +108,13 @@ export const TESTIMONIALS_LAYOUTS: SectionLayout[] = [
   {
     id: 'testimonials-masonry',
     name: 'Masonry',
-    prompt: `LAYOUT: 3-spaltiges Grid, unterschiedliche Kartenhöhen. Eine Featured-Karte spanning 2 Spalten. Karten: großes Anführungszeichen + Text + Avatar + Name + Rolle.`,
+    prompt: `LAYOUT: 3-column grid, varying card heights. One featured card spanning 2 columns. Cards: large quote mark + text + avatar + name + role.`,
     forbidden: ['equal-height cards', 'single column'],
   },
   {
     id: 'testimonials-featured-grid',
     name: 'Featured + Grid',
-    prompt: `LAYOUT: Oben: großes Featured-Quote mit Logo + Metric-Callout. Unten: 3 kleinere Karten in einer Reihe.`,
+    prompt: `LAYOUT: Top: large featured quote with logo + metric callout. Bottom: 3 smaller cards in a row.`,
     forbidden: ['uniform grid', 'equal-size testimonials'],
   },
 ]
@@ -125,19 +125,19 @@ export const NAVBAR_LAYOUTS: SectionLayout[] = [
   {
     id: 'navbar-sticky-blur',
     name: 'Sticky Blur',
-    prompt: `LAYOUT: Position sticky top-0, z-50. Hintergrund: bg-white/80 oder bg-dark/80 + backdrop-blur-md + border-b. Links: Logo (Icon + Name). Mitte: Nav-Links (4-5 Items). Rechts: "Sign in" Link + primärer CTA-Button (bg-accent). Mobile: Hamburger-Icon das per JS-Toggle ein Dropdown öffnet.`,
+    prompt: `LAYOUT: Position sticky top-0, z-50. Background: bg-white/80 or bg-dark/80 + backdrop-blur-md + border-b. Left: Logo (icon + name). Center: nav links (4-5 items). Right: "Sign in" link + primary CTA button (bg-accent). Mobile: hamburger icon that opens a dropdown via JS toggle.`,
     forbidden: ['position fixed', 'no blur', 'centered logo'],
   },
   {
     id: 'navbar-transparent-hero',
     name: 'Transparent über Hero',
-    prompt: `LAYOUT: Position absolute top-0, volle Breite, z-50. Kein Hintergrund (transparent). Text und Links: weiß oder hell. Wird beim Scroll solid (JS-Klasse 'scrolled' → bg-dark/95 backdrop-blur). Logo links, Links mitte, CTA rechts.`,
+    prompt: `LAYOUT: Position absolute top-0, full width, z-50. No background (transparent). Text and links: white or light. Becomes solid on scroll (JS class 'scrolled' → bg-dark/95 backdrop-blur). Logo left, links center, CTA right.`,
     forbidden: ['solid background on load', 'sticky', 'colored background'],
   },
   {
     id: 'navbar-minimal',
     name: 'Minimal Static',
-    prompt: `LAYOUT: Static, keine Sticky-Logik. bg-surface oder white. Logo links, wenige Links (3-4) rechts neben CTA. Kein Announcement-Bar. Kein Hamburger-Dropdown — bei Mobile nur Logo + CTA sichtbar.`,
+    prompt: `LAYOUT: Static, no sticky logic. bg-surface or white. Logo left, few links (3-4) right beside CTA. No announcement bar. No hamburger dropdown — on mobile only logo + CTA visible.`,
     forbidden: ['sticky', 'backdrop-blur', 'announcement bar', 'complex mobile menu'],
     paradigms: ['minimal-clean', 'luxury-editorial'],
   },
@@ -149,13 +149,13 @@ export const FOOTER_LAYOUTS: SectionLayout[] = [
   {
     id: 'footer-full',
     name: 'Full Multi-Column',
-    prompt: `LAYOUT: bg-dark oder slate-900. Oben: Email-Newsletter-Strip (volle Breite, Input + Button). Darunter: 4-5 Spalten Grid. Spalte 1: Logo + Tagline + Social Icons (SVG: Twitter/X, LinkedIn, GitHub). Spalten 2-5: Link-Gruppen (Product, Company, Resources, Legal) je mit Bold-Heading + 5-6 Links. Unten: Copyright + Privacy + Terms.`,
+    prompt: `LAYOUT: bg-dark or slate-900. Top: email newsletter strip (full width, input + button). Below: 4-5 column grid. Column 1: Logo + tagline + social icons (SVG: Twitter/X, LinkedIn, GitHub). Columns 2-5: link groups (Product, Company, Resources, Legal) each with bold heading + 5-6 links. Bottom: copyright + privacy + terms.`,
     forbidden: ['light background', 'single column', 'no social icons'],
   },
   {
     id: 'footer-minimal',
     name: 'Minimal',
-    prompt: `LAYOUT: Heller BG (gray-50 oder surface). Zwei Zeilen. Oben: Logo links + Nav-Links rechts (5-6 Items horizontal). Unten: Copyright links + "Status: Operational 🟢" rechts. Kein Newsletter, keine Spalten.`,
+    prompt: `LAYOUT: Light background (gray-50 or surface). Two rows. Top: logo left + nav links right (5-6 items horizontal). Bottom: copyright left + "Status: Operational 🟢" right. No newsletter, no columns.`,
     forbidden: ['dark background', 'multi-column', 'newsletter form'],
     paradigms: ['minimal-clean', 'luxury-editorial'],
   },
@@ -167,13 +167,13 @@ export const PRICING_LAYOUTS: SectionLayout[] = [
   {
     id: 'pricing-three-tier',
     name: '3 Tiers — Classic',
-    prompt: `LAYOUT: Oben: Annual/Monthly-Toggle (visueller Switch, kein JS nötig für Darstellung). 3 Karten nebeneinander. Mittlere Karte: visuell erhöht (größer, bg-accent oder starker Border, "Most Popular" Badge). Jede Karte: Preis groß + Billing-Info + USP-Satz + 8-10 Feature-Items (✓/✗) + CTA-Button. Unten: Trust-Zeile (SOC2 · No contracts · Cancel anytime).`,
+    prompt: `LAYOUT: Top: Annual/Monthly toggle (visual switch, no JS needed for display). 3 cards side by side. Middle card: visually elevated (larger, bg-accent or strong border, "Most Popular" badge). Each card: large price + billing info + USP sentence + 8-10 feature items (✓/✗) + CTA button. Bottom: trust row (SOC2 · No contracts · Cancel anytime).`,
     forbidden: ['flat equal cards', 'no featured tier', 'fewer than 3 tiers'],
   },
   {
     id: 'pricing-comparison-table',
     name: 'Comparison Table',
-    prompt: `LAYOUT: Horizontale Vergleichstabelle. Erste Spalte: Feature-Namen. Weitere Spalten: je ein Plan. Header-Zeile: Plan-Name + Preis + CTA. Zeilen abwechselnd bg-surface/white. Checkmarks (✓ in Accent) und Kreuze (✗ in muted) pro Zelle. Scrollbar auf Mobile.`,
+    prompt: `LAYOUT: Horizontal comparison table. First column: feature names. Further columns: one per plan. Header row: plan name + price + CTA. Rows alternating bg-surface/white. Checkmarks (✓ in accent) and crosses (✗ in muted) per cell. Scrollable on mobile.`,
     forbidden: ['card layout', 'no feature comparison', 'equal column width everywhere'],
   },
 ]
@@ -184,13 +184,13 @@ export const FAQ_LAYOUTS: SectionLayout[] = [
   {
     id: 'faq-two-column-accordion',
     name: 'Two Column Accordion',
-    prompt: `LAYOUT: Headline zentriert oben. Darunter: 2-spaltiges Grid. In jeder Spalte: 3-4 Accordion-Items (<details>/<summary>). Jedes Item: Frage (font-semibold) + +/- Icon rechts. Antwort: in <details> versteckt, bei open: sichtbar. 6-8 Fragen gesamt. Unten: "Still have questions?" Karte mit Email/Chat-Link.`,
+    prompt: `LAYOUT: Headline centered at top. Below: 2-column grid. In each column: 3-4 accordion items (<details>/<summary>). Each item: question (font-semibold) + +/- icon right. Answer: hidden in <details>, visible when open. 6-8 questions total. Bottom: "Still have questions?" card with email/chat link.`,
     forbidden: ['single column', 'all questions visible at once', 'no toggle'],
   },
   {
     id: 'faq-single-column-rich',
     name: 'Single Column Rich',
-    prompt: `LAYOUT: Headline links, Subtitle rechts (2-Spalten Header). Darunter: einzelne breite Spalte (max-w-3xl, mx-auto). 6-8 Accordion-Items mit großzügigem Padding. Jedes Item hat eine farbige Nummerierung (text-accent, font-black). Kein 2-Spalten-Grid.`,
+    prompt: `LAYOUT: Headline left, subtitle right (2-column header). Below: single wide column (max-w-3xl, mx-auto). 6-8 accordion items with generous padding. Each item has a colored number (text-accent, font-black). No 2-column grid.`,
     forbidden: ['two-column grid', 'no numbering', 'cramped padding'],
     paradigms: ['minimal-clean', 'luxury-editorial'],
   },
@@ -202,7 +202,7 @@ export const CUSTOM_LAYOUTS: SectionLayout[] = [
   {
     id: 'custom-freeform',
     name: 'Freeform',
-    prompt: `LAYOUT: Inferiere den Zweck aus dem Page-Kontext. Mögliche Typen: How-it-Works (3-4 Steps horizontal mit Nummern + Connector-Lines), Integration-Showcase (Logo-Grid mit Hover-Cards), Team-Section (Avatar-Grid + Names + Roles), Case Study (Split mit Metric-Callouts), Comparison Table. Wähle den zum Kontext passenden Typ und setze ihn vollständig um.`,
+    prompt: `LAYOUT: Infer the purpose from the page context. Possible types: How-it-Works (3-4 steps horizontal with numbers + connector lines), Integration Showcase (logo grid with hover cards), Team Section (avatar grid + names + roles), Case Study (split with metric callouts), Comparison Table. Choose the type that best fits the context and implement it fully.`,
     forbidden: ['generic placeholder content', 'lorem ipsum'],
   },
 ]
@@ -248,10 +248,10 @@ export function pickLayout(
 
 export function buildLayoutBlock(layout: SectionLayout): string {
   return [
-    `LAYOUT-VORGABE — ZWINGEND UMSETZEN (ID: ${layout.id}):`,
+    `LAYOUT DIRECTIVE — MUST IMPLEMENT EXACTLY (ID: ${layout.id}):`,
     layout.prompt,
     ``,
-    `VERBOTEN in dieser Section:`,
+    `FORBIDDEN in this section:`,
     layout.forbidden.map(f => `- ${f}`).join('\n'),
   ].join('\n')
 }

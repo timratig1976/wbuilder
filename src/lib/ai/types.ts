@@ -4,6 +4,7 @@ export interface CompletionParams {
   messages: Array<{ role: 'user' | 'assistant'; content: string }>
   max_tokens: number
   temperature?: number
+  effort?: 'low' | 'medium' | 'high'   // Anthropic extended thinking budget
   response_format?: { type: 'json_object' | 'text' }
 }
 

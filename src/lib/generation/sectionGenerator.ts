@@ -1,7 +1,7 @@
 import { SiteManifest, ValidationResult } from '../types/manifest'
 import { loadStyleDictionary } from '../style/styleDictionary'
 import { findBestSection } from '../sections/sectionLibrary'
-import { provider, MODEL_CONFIG } from '../ai/models'
+import { provider, MODEL_CONFIG, getProvider } from '../ai/models'
 import { safeParseJson, applyAutoFixes, sanitizeImagePaths, resolveNavbarPlaceholders, enforceNavOpener } from './autoFix'
 import { designSpecFromDict } from '../style/styleDictionary'
 import {
@@ -39,7 +39,8 @@ export async function generateSection(
   // ── Pass 1: Structure ─────────────────────────────────
   onProgress?.({ pass: 1 })
   const layoutId = resolveLayoutId(sectionType, manifest)
-  let pass1Html = await provider.complete(
+  const pass1Provider = getProvider(MODEL_CONFIG.pass1_structure.model)
+  let pass1Html = await pass1Provider.complete(
     {
       ...MODEL_CONFIG.pass1_structure,
       temperature: sectionType === 'navbar' ? 0.7 : MODEL_CONFIG.pass1_structure.temperature,
@@ -64,7 +65,8 @@ export async function generateSection(
   let pass2Html: string | null = null
   if (!isChrome) {
     onProgress?.({ pass: 2 })
-    pass2Html = await provider.complete(
+    const pass2Provider = getProvider(MODEL_CONFIG.pass2_visual.model)
+    pass2Html = await pass2Provider.complete(
       {
         ...MODEL_CONFIG.pass2_visual,
         system: buildPass2System(dict),
@@ -78,7 +80,8 @@ export async function generateSection(
   // ── Pass 3: Validation ────────────────────────────────
   onProgress?.({ pass: 3 })
   const htmlToValidate = pass2Html ?? pass1Html
-  const validationRaw = await provider.complete(
+  const pass3Provider = getProvider(MODEL_CONFIG.pass3_validator.model)
+  const validationRaw = await pass3Provider.complete(
     {
       ...MODEL_CONFIG.pass3_validator,
       system: PASS3_SYSTEM,
@@ -170,7 +173,7 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
     // Append customPrompt as additional instruction when provided
     const pass1UserMsg = buildPass1User(sectionType, manifest, referenceHtml, posCtx, pageIndex, seed, requestedLayoutId)
       + (customPrompt ? `\n\nADDITIONAL INSTRUCTION (apply this on top of the standard rules): ${customPrompt}` : '')
-    await provider.stream(
+    await getProvider(MODEL_CONFIG.pass1_structure.model).stream(
       {
         ...MODEL_CONFIG.pass1_structure,
         temperature: sectionType === 'navbar' ? 0.7 : MODEL_CONFIG.pass1_structure.temperature,
@@ -178,7 +181,7 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
         messages: [{ role: 'user', content: pass1UserMsg }],
       },
       (chunk) => { pass1Html += chunk },
-      { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure` }
+      { pass: 'pass1_structure', label: `Pass 1 — ${sectionType} structure [layout:${chosenLayoutId ?? 'none'}]` }
     )
     if (sectionType === 'navbar') {
       const nav = manifest.navbar
@@ -197,7 +200,7 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
     if (!isChrome) {
       send({ type: 'status', pass: 2, section: sectionType, message: 'Adding visual layer...' })
       let pass2Html = ''
-      await provider.stream(
+      await getProvider(MODEL_CONFIG.pass2_visual.model).stream(
         {
           ...MODEL_CONFIG.pass2_visual,
           system: buildPass2System(dict),
@@ -213,7 +216,7 @@ Output ONLY the full modified HTML. No markdown, no explanation.`,
     // Pass 3
     send({ type: 'status', pass: 3, section: sectionType, message: 'Validating...' })
     try {
-      const validationRaw = await provider.complete(
+      const validationRaw = await getProvider(MODEL_CONFIG.pass3_validator.model).complete(
         {
           ...MODEL_CONFIG.pass3_validator,
           system: PASS3_SYSTEM,
