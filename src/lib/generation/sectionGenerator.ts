@@ -1,7 +1,11 @@
 import { SiteManifest, ValidationResult } from '../types/manifest'
 import { loadStyleDictionary } from '../style/styleDictionary'
-import { findBestSection } from '../sections/sectionLibrary'
+import { findBestSection, findBestSectionWithMeta } from '../sections/sectionLibrary'
 import { provider, MODEL_CONFIG, getProvider } from '../ai/models'
+import { nanoid } from 'nanoid'
+import { HERO_LAYOUTS, FEATURES_LAYOUTS, CTA_LAYOUTS, STATS_LAYOUTS, TESTIMONIALS_LAYOUTS, NAVBAR_LAYOUTS, FOOTER_LAYOUTS, PRICING_LAYOUTS, FAQ_LAYOUTS } from '../sectionLayouts'
+
+const ALL_LAYOUTS = [...HERO_LAYOUTS, ...FEATURES_LAYOUTS, ...CTA_LAYOUTS, ...STATS_LAYOUTS, ...TESTIMONIALS_LAYOUTS, ...NAVBAR_LAYOUTS, ...FOOTER_LAYOUTS, ...PRICING_LAYOUTS, ...FAQ_LAYOUTS]
 import { safeParseJson, applyAutoFixes, sanitizeImagePaths, resolveNavbarPlaceholders, enforceNavOpener } from './autoFix'
 import { designSpecFromDict } from '../style/styleDictionary'
 import {
@@ -132,11 +136,79 @@ export async function generateSectionStreamed(
   regenOptions?: RegenOptions
 ): Promise<void> {
   const dict = loadStyleDictionary(manifest.style_dictionary_ref)
-  const referenceHtml = findBestSection(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone, manifest.navbar?.behaviour)
   const { customPrompt, existingHtml, mode = 'full', seed, layoutId: requestedLayoutId } = regenOptions ?? {}
   const chosenLayoutId = resolveLayoutId(sectionType, manifest, seed, requestedLayoutId)
 
   const send = (event: object) => writer.write(`data: ${JSON.stringify(event)}\n\n`)
+
+  // ── Analysis logs (Layout + Reference + Patterns) ─────────────────────────
+  const now = Date.now()
+
+  // 1. Layout selection log
+  if (chosenLayoutId) {
+    const layoutMeta = ALL_LAYOUTS.find(l => l.id === chosenLayoutId)
+    send({ type: 'log', entry: {
+      id: nanoid(), timestamp: now, pass: 'other',
+      label: `Layout — ${sectionType} → ${layoutMeta?.name ?? chosenLayoutId}`,
+      model: '—',
+      systemPrompt: '',
+      userMessage: '',
+      response: JSON.stringify({
+        template: chosenLayoutId,
+        name: layoutMeta?.name ?? chosenLayoutId,
+        paradigm: manifest.style_paradigm,
+        industry: manifest.site?.industry,
+        forbidden: layoutMeta?.forbidden ?? [],
+      }, null, 2),
+      inputTokensEst: 0, outputTokensEst: 0, durationMs: 0, status: 'success',
+    }})
+  }
+
+  // 2. Reference section log + HTML
+  const refResult = findBestSectionWithMeta(sectionType, manifest.style_paradigm, manifest.site.industry, manifest.visual_tone, manifest.navbar?.behaviour)
+  const referenceHtml = refResult.html
+  if (refResult.selected) {
+    send({ type: 'log', entry: {
+      id: nanoid(), timestamp: now + 1, pass: 'other',
+      label: `Reference — ${sectionType} → ${refResult.selected} (score: ${refResult.matchScore})`,
+      model: '—',
+      systemPrompt: '',
+      userMessage: '',
+      response: JSON.stringify({
+        selected: refResult.selected,
+        matchScore: refResult.matchScore,
+        paradigm: manifest.style_paradigm,
+        industry: manifest.site?.industry,
+        tone: manifest.visual_tone,
+        topCandidates: refResult.topCandidates,
+      }, null, 2),
+      inputTokensEst: 0, outputTokensEst: 0, durationMs: 0, status: 'success',
+    }})
+  }
+
+  // 3. Active patterns log
+  const sectionSpecific = manifest.section_patterns?.[sectionType] ?? []
+  const globalRelevant = (manifest.selected_patterns ?? []).filter(p => {
+    const s = p.applicable_sections
+    return !s || s.includes('*') || s.includes(sectionType)
+  })
+  const sectionSpecificIds = new Set(sectionSpecific.map(p => p.id))
+  const combinedPatterns = [...sectionSpecific, ...globalRelevant.filter(p => !sectionSpecificIds.has(p.id))]
+  if (combinedPatterns.length > 0) {
+    send({ type: 'log', entry: {
+      id: nanoid(), timestamp: now + 2, pass: 'other',
+      label: `Patterns — ${sectionType} (${combinedPatterns.length}): ${combinedPatterns.map(p => p.name).join(', ')}`,
+      model: '—',
+      systemPrompt: '',
+      userMessage: '',
+      response: JSON.stringify({
+        sectionSpecific: sectionSpecific.map(p => p.name),
+        globalRelevant: globalRelevant.map(p => p.name),
+        combined: combinedPatterns.map(p => p.name),
+      }, null, 2),
+      inputTokensEst: 0, outputTokensEst: 0, durationMs: 0, status: 'success',
+    }})
+  }
 
   // Forward log entries from the provider through SSE so the client can display them
   provider.onLog = (entry) => send({ type: 'log', entry })

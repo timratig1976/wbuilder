@@ -586,6 +586,7 @@ Tone: ${manifest.site.tone} | Adjectives: ${manifest.site.adjectives.join(', ')}
   const sectionSpecific = sectionType ? (manifest.section_patterns?.[sectionType] ?? []) : []
   const sectionSpecificIds = new Set(sectionSpecific.map((p) => p.id))
   const combined = [...sectionSpecific, ...globalRelevant.filter((p) => !sectionSpecificIds.has(p.id))]
+
   if (!combined.length) return ''
   return `
 
@@ -623,6 +624,7 @@ export function buildPass1User(
   const chosenLayout = isChromeSec ? null : pickLayout(sectionType, {
     seed: effectiveSeed,
     paradigm: manifest.style_paradigm,
+    industry: manifest.site?.industry,
     layoutId,
   })
   const layoutBlock = chosenLayout ? buildLayoutBlock(chosenLayout) : ''
@@ -820,7 +822,7 @@ export function resolveLayoutId(
   const isChromeSec = sectionType === 'navbar' || sectionType === 'footer'
   if (isChromeSec) return undefined
   const effectiveSeed = seed ?? Math.floor(Date.now() / 300000) % 100
-  return pickLayout(sectionType, { seed: effectiveSeed, paradigm: manifest.style_paradigm, layoutId })?.id
+  return pickLayout(sectionType, { seed: effectiveSeed, paradigm: manifest.style_paradigm, industry: manifest.site?.industry, layoutId })?.id
 }
 
 // ═══════════════════════════════════════════════════════

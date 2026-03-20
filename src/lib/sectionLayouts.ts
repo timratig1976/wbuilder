@@ -4,6 +4,7 @@ export interface SectionLayout {
   prompt:    string
   forbidden: string[]
   paradigms?: string[]
+  excludeIndustries?: string[]
 }
 
 export const HERO_LAYOUTS: SectionLayout[] = [
@@ -18,6 +19,8 @@ export const HERO_LAYOUTS: SectionLayout[] = [
     name: 'Bento Grid',
     prompt: `LAYOUT: CSS Grid grid-template-columns:2fr 1.25fr 1.35fr, 2 rows, 2px gap on dark BG. Card A (col 1, row 1+2): Headline+CTA. Card B (col 2, row 1): Stats. Card C (col 3, row 1+2): Live demo. Card D (col 2, row 2): Platform badges. NO classic hero layout.`,
     forbidden: ['traditional hero layout', 'single large image', 'centered headline'],
+    paradigms: ['tech-dark'],
+    excludeIndustries: ['construction', 'real-estate', 'luxury', 'consulting', 'healthcare', 'legal', 'finance'],
   },
   {
     id: 'hero-centered',
@@ -222,7 +225,7 @@ const LAYOUTS: Record<string, SectionLayout[]> = {
 
 export function pickLayout(
   sectionType: string,
-  options?: { seed?: number; paradigm?: string; layoutId?: string }
+  options?: { seed?: number; paradigm?: string; industry?: string; layoutId?: string }
 ): SectionLayout | null {
   const pool = LAYOUTS[sectionType]
   if (!pool?.length) return null
@@ -232,9 +235,17 @@ export function pickLayout(
   }
 
   let candidates = [...pool]
+
   if (options?.paradigm) {
     const filtered = candidates.filter(
       l => !l.paradigms || l.paradigms.includes(options.paradigm!)
+    )
+    if (filtered.length > 0) candidates = filtered
+  }
+
+  if (options?.industry) {
+    const filtered = candidates.filter(
+      l => !l.excludeIndustries || !l.excludeIndustries.includes(options.industry!)
     )
     if (filtered.length > 0) candidates = filtered
   }

@@ -22,12 +22,16 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder()
   const stream = new TransformStream()
   const writer = stream.writable.getWriter()
+  let closed = false
 
   const sseWriter = {
     write: (data: string) => {
+      if (closed) return
       writer.write(encoder.encode(data)).catch(() => {})
     },
     close: () => {
+      if (closed) return
+      closed = true
       writer.close().catch(() => {})
     },
   }
@@ -37,8 +41,10 @@ export async function POST(req: NextRequest) {
     sectionType, manifest, sseWriter, undefined, pageIndex,
     { customPrompt, existingHtml, mode: mode ?? 'full' }
   ).catch((err) => {
-    sseWriter.write(`data: ${JSON.stringify({ type: 'error', message: String(err) })}\n\n`)
-    sseWriter.close()
+    if (!closed) {
+      sseWriter.write(`data: ${JSON.stringify({ type: 'error', message: String(err) })}\n\n`)
+      sseWriter.close()
+    }
   })
 
   return new Response(stream.readable, {
