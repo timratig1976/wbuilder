@@ -28,7 +28,6 @@ export class AnthropicProvider implements AIProvider {
         model:       params.model,
         max_tokens:  params.max_tokens,
         temperature: params.temperature ?? 0.7,
-        effort:      params.effort ?? 'low',
         system:      params.system,
         messages:    params.messages.map((m) => ({ role: m.role, content: m.content })),
       } as any)
@@ -63,7 +62,6 @@ export class AnthropicProvider implements AIProvider {
         model:       params.model,
         max_tokens:  params.max_tokens,
         temperature: params.temperature ?? 0.7,
-        effort:      params.effort ?? 'low',
         system:      params.system,
         messages:    params.messages.map((m) => ({ role: m.role, content: m.content })),
         stream:      true,
