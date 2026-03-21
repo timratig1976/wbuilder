@@ -1,0 +1,81 @@
+<section class="overflow-hidden isolate relative py-16 md:py-24" style="background:var(--color-background)">
+  <div class="max-w-7xl mx-auto px-5 md:px-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+
+      <!-- LEFT col-span-5: Eyebrow + Headline + Subline + CTAs -->
+      <div class="lg:col-span-5 flex flex-col h-full min-w-0 p-8"
+           style="background:var(--color-surface);border:1px solid color-mix(in srgb,var(--color-text) 10%,transparent)">
+        <div class="flex flex-col gap-5 flex-1 justify-between">
+          <div class="flex flex-col gap-5">
+            <span class="text-xs font-semibold tracking-widest uppercase" style="color:var(--color-accent)">Eyebrow label (2–4 words)</span>
+            <div>
+              <h1 class="font-bold leading-none mb-2" style="font-size:clamp(1.8rem,3vw,2.8rem);color:var(--color-text);font-family:var(--font-heading)">Headline part one</h1>
+              <h1 class="font-bold leading-none" style="font-size:clamp(1.8rem,3vw,2.8rem);color:var(--color-accent);font-family:var(--font-heading)">Accent part two.</h1>
+            </div>
+            <p class="text-base leading-relaxed" style="color:color-mix(in srgb,var(--color-text) 65%,transparent)">
+              Subline — one outcome-focused sentence, max 12 words, specific.
+            </p>
+          </div>
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-wrap gap-3">
+              <button class="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm" style="background:var(--color-accent);color:var(--color-background)">
+                → Primary CTA (verb + benefit)
+              </button>
+              <button class="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm" style="border:1.5px solid color-mix(in srgb,var(--color-text) 25%,transparent);color:var(--color-text)">
+                Secondary CTA
+              </button>
+            </div>
+            <p class="text-xs" style="color:color-mix(in srgb,var(--color-text) 40%,transparent)">Micro-copy — risk reduction, max 5 words</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS col-span-3: KPIs stacked -->
+      <div class="lg:col-span-3 flex flex-col h-full overflow-hidden p-6"
+           style="background:var(--color-surface);border:1px solid color-mix(in srgb,var(--color-text) 10%,transparent)">
+        <div class="text-xs font-semibold tracking-widest uppercase mb-5" style="color:color-mix(in srgb,var(--color-text) 45%,transparent)">Section headline (2–3 words)</div>
+        <div class="flex flex-col flex-1 justify-between">
+          <div class="py-4" style="border-bottom:1px solid color-mix(in srgb,var(--color-text) 10%,transparent)">
+            <div class="text-xs mb-1" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">KPI label 1 (short, specific)</div>
+            <div class="font-bold tabular-nums leading-none" style="font-size:2rem;color:var(--color-accent);font-family:var(--font-heading)">00%</div>
+          </div>
+          <div class="py-4" style="border-bottom:1px solid color-mix(in srgb,var(--color-text) 10%,transparent)">
+            <div class="text-xs mb-1" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">KPI label 2 (short, specific)</div>
+            <div class="font-bold tabular-nums leading-none" style="font-size:2rem;color:var(--color-text);font-family:var(--font-heading)">000+</div>
+          </div>
+          <div class="py-4">
+            <div class="text-xs mb-1" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">KPI label 3 (short, specific)</div>
+            <div class="font-bold tabular-nums leading-none" style="font-size:2rem;color:var(--color-text);font-family:var(--font-heading)">00+</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISUAL col-span-4: full-bleed image + caption -->
+      <div class="lg:col-span-4 flex flex-col h-full overflow-hidden relative"
+           style="background:var(--color-surface);border:1px solid color-mix(in srgb,var(--color-text) 10%,transparent);min-height:320px">
+        <img
+          src="https://picsum.photos/id/220/800/600"
+          alt="Visual description (specific, no generics)"
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"
+        />
+        <div class="absolute inset-0" style="background:linear-gradient(to top,color-mix(in srgb,var(--color-background) 75%,transparent) 0%,transparent 55%)"></div>
+        <div class="relative mt-auto p-6 flex flex-col gap-2">
+          <span class="text-xs font-semibold tracking-widest uppercase" style="color:var(--color-accent)">Eyebrow (2 words)</span>
+          <p class="text-sm leading-snug font-semibold" style="color:var(--color-text)">Short visual caption — max 8 words.</p>
+        </div>
+      </div>
+
+      <!-- TRUST full width -->
+      <div class="lg:col-span-12 flex items-center gap-6 flex-wrap py-3"
+           style="border-top:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)">
+        <span class="text-xs font-semibold tracking-widest uppercase" style="color:color-mix(in srgb,var(--color-text) 40%,transparent)">Trusted by:</span>
+        <span class="text-sm font-bold tracking-wide" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">COMPANY 1</span>
+        <span class="text-sm font-bold tracking-wide" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">COMPANY 2</span>
+        <span class="text-sm font-bold tracking-wide" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">COMPANY 3</span>
+        <span class="text-sm font-bold tracking-wide" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">COMPANY 4</span>
+        <span class="text-sm font-bold tracking-wide" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">COMPANY 5</span>
+      </div>
+
+    </div>
+  </div>
+</section>

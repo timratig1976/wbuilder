@@ -24,12 +24,18 @@ export default function Home() {
         </p>
 
         {/* Primary CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+          <Link
+            href="/briefing-v3"
+            className="inline-flex items-center gap-2 bg-violet-500 hover:bg-violet-400 text-white font-bold text-lg px-8 py-4 rounded-2xl transition shadow-xl"
+          >
+            <Sparkles className="w-5 h-5" /> Hero Generator v3
+          </Link>
           <Link
             href="/briefing"
             className="inline-flex items-center gap-2 bg-white text-indigo-900 font-bold text-lg px-8 py-4 rounded-2xl hover:bg-indigo-50 transition shadow-xl"
           >
-            <Sparkles className="w-5 h-5" /> Start Building Free
+            <Zap className="w-5 h-5" /> Builder v2
           </Link>
           <Link
             href="/projects"
@@ -37,6 +43,9 @@ export default function Home() {
           >
             <FolderOpen className="w-5 h-5" /> My Projects
           </Link>
+        </div>
+        <div className="text-xs text-indigo-300 mb-12">
+          v3: Briefing → Moodboard → 8-Call AI Pipeline → Hero HTML
         </div>
 
         {/* Features */}

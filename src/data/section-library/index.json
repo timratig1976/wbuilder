@@ -117,4 +117,71 @@
     "description": "",
     "source": ""
   }
+,
+  {
+    "id": "bento-3col-full",
+    "type": "bento-3col",
+    "paradigm": "bold-expressive",
+    "quality_score": 9,
+    "tags": ["bento", "hero", "3col", "bento-3col", "grid", "full-section"],
+    "industries": ["construction"],
+    "tone": [],
+    "html_path": "bento-3col-full.html",
+    "label": "Bento 3-col hero — complete section (left + stats + visual + trust)"
+  },
+  {
+    "id": "bento-slot-left",
+    "type": "bento-slot-left",
+    "paradigm": "bold-expressive",
+    "quality_score": 9,
+    "tags": ["bento", "hero", "copy", "cta", "left-column"],
+    "industries": [],
+    "tone": [],
+    "html_path": "bento-slot-left.html",
+    "label": "Bento left column — copy + CTA"
+  },
+  {
+    "id": "bento-slot-left-b",
+    "type": "bento-slot-left",
+    "paradigm": "tech-dark",
+    "quality_score": 9,
+    "tags": ["bento", "hero", "copy", "cta", "left-column", "progress-bars", "metrics"],
+    "industries": [],
+    "tone": [],
+    "html_path": "bento-slot-left-b.html",
+    "label": "Bento left column B — copy + progress bars"
+  },
+  {
+    "id": "bento-slot-stats",
+    "type": "bento-slot-stats",
+    "paradigm": "bold-expressive",
+    "quality_score": 9,
+    "tags": ["bento", "stats", "kpi", "numbers", "metrics"],
+    "industries": [],
+    "tone": [],
+    "html_path": "bento-slot-stats.html",
+    "label": "Bento stats card — aligned KPIs"
+  },
+  {
+    "id": "bento-slot-visual",
+    "type": "bento-slot-visual",
+    "paradigm": "bold-expressive",
+    "quality_score": 9,
+    "tags": ["bento", "visual", "image", "photo", "caption"],
+    "industries": [],
+    "tone": [],
+    "html_path": "bento-slot-visual.html",
+    "label": "Bento visual card — full-bleed image + bottom caption"
+  },
+  {
+    "id": "bento-slot-visual-b",
+    "type": "bento-slot-visual",
+    "paradigm": "tech-dark",
+    "quality_score": 9,
+    "tags": ["bento", "visual", "image", "photo", "caption", "diagonal", "clip-path", "overlay"],
+    "industries": [],
+    "tone": [],
+    "html_path": "bento-slot-visual-b.html",
+    "label": "Bento visual card B — diagonal overlay + corner accent"
+  }
 ]

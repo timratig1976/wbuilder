@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Wand2, Eye, Save, Trash2, Plus, Tag, Code2, Loader2, Check, X, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 
-const SECTION_TYPES = ['navbar', 'hero', 'features', 'stats', 'testimonials', 'pricing', 'faq', 'cta', 'footer', 'custom']
+const SECTION_TYPES = ['navbar', 'hero', 'features', 'stats', 'testimonials', 'pricing', 'faq', 'cta', 'footer', 'bento-3col', 'bento-slot-left', 'bento-slot-stats', 'bento-slot-visual', 'custom']
 const PARADIGMS = ['minimal-clean', 'bold-expressive', 'tech-dark', 'luxury-editorial']
 const BEHAVIOUR_TAGS = ['sticky', 'overlay-hero', 'hide-on-scroll', 'static', 'blur', 'transparent', 'solid', 'border']
 
